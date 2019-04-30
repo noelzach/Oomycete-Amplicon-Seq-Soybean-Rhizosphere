@@ -1,0 +1,220 @@
+﻿OTU,Accesion number of BLAST Hit,Percent ID,Evalue,Bitscore,BLAST Taxonomy,CONSTAX Taxonomy,Clade ,Taxonomy Label,Notes 
+OTU1,MK326555,100,2.95E-109,405,Pythium ultimum var. ultimum,Pythium ultimum var ultimum,Pythium Clade I,OTU1 Pythium ultimum var ultimum,Pathogenic to soybean
+OTU2,MK326540,100,2.95E-109,405,Pythium attrantheridium,Pythium sp.,Pythium Clade F,OTU2 Pythium sp. Clade F,Unknown
+OTU3,MK124136,100,2.95E-109,405,Pythium heterothallicum,Pythium heterothallicum,Pythium Clade I,OTU3 Pythium heterothallicum,Pathogenic to soybean
+OTU4,MG799210,100,2.95E-109,405,Pythium oligandrum,Pythium sp.,Pythium Clade D,OTU4 Pythium sp. Clade D,Putative mycoparasite
+OTU5,MK326520,100,2.95E-109,405,Pythium sylvaticum,Pythium sylvaticum,Pythium Clade F,OTU5 Pythium sylvaticum,Pathogenic to soybean
+OTU6,MK208681,100,2.95E-109,405,Pythium selbyi,Pythium longandrum,Pythium Clade E,OTU6 Pythium longandrum,Pathogenic to soybean
+OTU7,KU211392,100,2.95E-109,405,Pythium heterothallicum,Pythium heterothallicum,Pythium Clade I,OTU7 Pythium heterothallicum,Pathogenic to soybean
+OTU8,JF431913,100,2.95E-109,405,Pythium aff. monospermum,Pythium sp.,Pythium Clade A,OTU8 Pythium sp. Clade A,Unknown
+OTU9,KX788831,100,2.95E-109,405,Pythium minus,Pythium minus,Pythium Clade E,OTU9 Pythium minus,Pathogenic to soybean
+OTU10,MK326486,100,2.95E-109,405,Pythium arrhenomanes,Pythium sp.,Pythium Clade B,OTU10 Pythium sp. Clade B,Unknown
+OTU12,KU892280,87.671,1.89E-61,246,Oomycetes sp. NF-4,Pythiaceae sp.,No clade information ,OTU12 Pythiaceae sp.,Unknown
+OTU13,MK326532,100,2.95E-109,405,Pythium rostratifingens,Pythium rostratifingens,Pythium Clade E,OTU13 Pythium rostratifingens,Non-Pathogenic to soybean
+OTU14,MG799194,100,2.95E-109,405,Globisporangium sp. MA-2018b,Pythium acrogynum,Pythium Clade E,OTU14 Pythium acrogynum,Non-Pathogenic to soybean
+OTU16,KT338193,99.543,1.37E-107,399,Pythium monospermum,Pythium monospermum,Pythium Clade A,OTU16 Pythium monospermum,Non-Pathogenic to soybean
+OTU18,MG256842,100,2.95E-109,405,Pythium violae,Pythium sp nov,Pythium Clade B,OTU18 Pythium sp nov,Unknown
+OTU19,MK326522,100,2.95E-109,405,Pythium irregulare,Pythium irregulare,Pythium Clade F,OTU19 Pythium irregulare,Pathogenic to soybean
+OTU22,KU892280,86.758,1.47E-57,233,Oomycetes sp. NF-4,Pythiaceae sp.,No clade information ,OTU22 Pythiaceae sp.,Unknown
+OTU23,KT337982,100,2.95E-109,405,Pythium sp. unique2,Pythium monospermum,Pythium Clade A,OTU23 Pythium monospermum,Non-Pathogenic to soybean
+OTU24,KJ716869,99.541,4.94E-107,398,Lagena radicicola,Pythium sp.,No clade information ,OTU24 Pythium sp.,Unknown
+OTU25,JF431913,94.064,8.51E-85,324,Pythium aff. monospermum,Pythium sp.,Pythium Clade A,OTU25 Pythium sp. Clade A,Unknown
+OTU26,KX266868,99.539,4.94E-107,398,Pythium sp.,Pythium sp.,No clade information ,OTU26 Pythium sp.,Unknown
+OTU27,MK326550,100,2.95E-109,405,Globisporangium orthogonon,Pythium orthogonon,Pythium Clade J,OTU27 Pythium orthogonon,Non-Pathogenic to soybean
+OTU28,MF446838,92.793,3.96E-83,318,Pythium intermedium,Oomycota sp.,No clade information ,OTU28 Oomycota sp.,Unknown
+OTU29,KT338192,100,3.82E-108,401,Pythium sp. C73,Pythium monospermum,Pythium Clade A,OTU29 Pythium monospermum,Non-Pathogenic to soybean
+OTU30,MF446841,98.636,2.97E-104,388,Pythium intermedium,Oomycetes sp.,No clade information ,OTU30 Oomycetes sp.,Unknown
+OTU32,MH620163,100,2.95E-109,405,Phytophthora sp. taxon parsley,Phytophthora sp.,Phytophthora Clade 8,OTU32 Phytophthora sp. Clade 8,Unknown
+OTU33,KU209835,100,2.95E-109,405,Pythium rostratifingens,Pythium rostratifingens,Pythium Clade E,OTU33 Pythium rostratifingens,Non-Pathogenic to soybean
+OTU34,KU210687,100,2.95E-109,405,Pythium irregulare,Pythium irregulare,Pythium Clade F,OTU34 Pythium irregulare,Pathogenic to soybean
+OTU36,MK326508,100,2.95E-109,405,Pythium acanthicum,Pythium acanthicum,Pythium Clade D,OTU36 Pythium acanthicum,Putative mycoparasite
+OTU38,GU292156,97.717,6.44E-101,377,Albugo leimonios,Albugo candida,No clade information ,OTU38 Albugo candida,Unknown
+OTU39,KU209682,100,2.95E-109,405,Pythium acanthicum,Pythium acanthicum,Pythium Clade D,OTU39 Pythium acanthicum,Putative mycoparasite
+OTU41,MK326541,100,2.95E-109,405,Pythium ultimum var. ultimum,Pythium ultimum var ultimum,Pythium Clade I,OTU41 Pythium ultimum var ultimum,Pathogenic to soybean
+OTU42,MK192845,81.91,1.53E-32,150,uncultured Apodachlya,Oomycetes sp.,No clade information ,OTU42 Oomycetes sp.,Unknown
+OTU43,KX492592,100,2.95E-109,405,Lagenidium sp. RV-2016a,Lagenidium giganteum,No clade information ,OTU43 Lagenidium giganteum,Putative entomoparasite
+OTU44,KU863599,97.059,8.45E-90,340,uncultured Oomycetes,Pythium sp.,No clade information ,OTU44 Pythium sp.,Unknown
+OTU46,MK326451,100,2.95E-109,405,Phytophthora sansomea,Phytophthora sansomeana,Phytophthora Clade 8,OTU46 Phytophthora sansomeana,Pathogenic to soybean
+OTU47,KT257473,92.373,1.52E-37,167,Myzocytiopsis vermicola,Pythium sp.,No clade information ,OTU47 Pythium sp.,Unknown
+OTU48,HQ643126,81.818,1.52E-37,167,Apodachlya minima,Oomycetes sp.,No clade information ,OTU48 Oomycetes sp.,Unknown
+OTU50,KU892280,92,9.07E-40,174,Oomycetes sp. NF-4,Pythiales sp.,No clade information ,OTU50 Pythiales sp.,Unknown
+OTU51,HQ643951,100,2.95E-109,405,Pythium vanterpoolii,Pythium vanterpoolii,Pythium Clade B,OTU51 Pythium vanterpoolii,Pathogenic to soybean
+OTU52,MK326513,100,4.94E-107,398,Pythium aff. torulosum,Pythium aff torulosum,Pythium Clade B,OTU52 Pythium aff torulosum,Pathogenic to soybean
+OTU55,KU211309,100,3.82E-108,401,Pythium conidiophorum,Pythium conidiophorum,Pythium Clade B,OTU55 Pythium conidiophorum,Pathogenic to soybean
+OTU57,MF446843,99.087,6.39E-106,394,Pythium intermedium,Pythiaceae sp.,No clade information ,OTU57 Pythiaceae sp.,Unknown
+OTU60,MK192845,83.981,5.42E-42,182,uncultured Apodachlya,Oomycota sp.,No clade information ,OTU60 Oomycota sp.,Unknown
+OTU61,MH094548,87.225,5.27E-62,248,Paralagenidium karlingii,Pythium sp.,No clade information ,OTU61 Pythium sp.,Unknown
+OTU62,HQ643126,85.973,3.19E-54,222,Apodachlya minima,Apodachlya brachynema,No clade information ,OTU62 Apodachlya brachynema,Unknown
+OTU63,KU715057,100,2.95E-109,405,Pythium sp. FL-2016f,Pythium heterothallicum,Pythium Clade I,OTU63 Pythium heterothallicum,Pathogenic to soybean
+OTU64,KY822475,91.124,6.86E-56,228,uncultured Oomycetes,Saprolegniaceae sp.,No clade information ,OTU64 Saprolegniaceae sp.,Unknown
+OTU65,MH999837,100,2.95E-109,405,Peronospora variabilis,Oomycetes sp.,No clade information ,OTU65 Oomycetes sp.,Unknown
+OTU68,KP862942,96.804,1.39E-97,366,Pythium camurandrum,Pythium camurandrum,Pythium Clade E,OTU68 Pythium camurandrum,Non-Pathogenic to soybean
+OTU71,AB581396,95.169,6.58E-86,327,uncultured fungus,Oomycetes sp.,No clade information ,OTU71 Oomycetes sp.,Unknown
+OTU72,MF095148,100,2.95E-109,405,uncultured Pythium,Pythium apiculatum,Pythium Clade E,OTU72 Pythium apiculatum,Unknown
+OTU73,MH037150,100,2.95E-109,405,Phytophthora plurivora,Phytophthora citricola,Phytophthora Clade 2,OTU73 Phytophthora citricola,Unknown
+OTU76,HQ643126,83.71,1.16E-43,187,Apodachlya minima,Oomycetes sp.,No clade information ,OTU76 Oomycetes sp.,Unknown
+OTU79,MG712917,100,2.95E-109,405,Phytophthora cactorum,Phytophthora cactorum,Phytophthora Clade 1,OTU79 Phytophthora cactorum,Unknown
+OTU80,KX788828,100,2.95E-109,405,Pythium carolinianum,Pythium carolinianum,Pythium Clade E,OTU80 Pythium carolinianum,Putative entomoparasite
+OTU81,AY598621,94.57,1.41E-87,333,Pythium monospermum,Pythium monospermum,Pythium Clade A,OTU81 Pythium monospermum,Non-Pathogenic to soybean
+OTU83,KJ716869,96.33,2.33E-95,359,Lagena radicicola,Pythium sp.,No clade information ,OTU83 Pythium sp.,Unknown
+OTU85,AB796297,94.595,4.22E-38,169,Pythium splendens,Pythiaceae sp.,No clade information ,OTU85 Pythiaceae sp.,Unknown
+OTU86,AB581396,91.15,4.25E-33,152,uncultured fungus,Pythiaceae sp.,No clade information ,OTU86 Pythiaceae sp.,Unknown
+OTU90,MG712914,100,2.95E-109,405,Phytopythium litorale,Phytopythium litorale,Phytopythium,OTU90 Phytopythium litorale,Pathogenic to soybean
+OTU91,LC216338,79.31,5.49E-32,148,Pythium marsipium,Pythium sp.,No clade information ,OTU91 Pythium sp.,Unknown
+OTU92,MK192845,78.818,1.20E-23,121,uncultured Apodachlya,Oomycota sp.,No clade information ,OTU92 Oomycota sp.,Unknown
+OTU93,KU588240,87.786,1.53E-32,150,Pythium sp.,Pythium sp.,No clade information ,OTU93 Pythium sp.,Unknown
+OTU94,MK299414,100,2.95E-109,405,Phytophthora parasitica,Phytophthora nicotianae,Phytophthora Clade 1,OTU94 Phytophthora nicotianae,Unknown
+OTU96,MK326464,100,8.27E-105,390,Pythium aff. dissotocum,Pythium sp.,Pythium Clade B,OTU96 Pythium sp. Clade B,Unknown
+OTU97,MK192858,99.468,2.35E-90,342,uncultured Pythium,Pythiales sp.,No clade information ,OTU97 Pythiales sp.,Unknown
+OTU100,HQ643969,90.984,7.06E-36,161,Pythium violae,Pythium sp.,No clade information ,OTU100 Pythium sp.,Unknown
+OTU102,MH620145,100,2.95E-109,405,Phytophthora sojae,Phytophthora sojae,Phytophthora Clade 7,OTU102 Phytophthora sojae,Pathogenic to soybean
+OTU104,AY455774,78.539,7.16E-26,128,Aphanomyces stellatus,Saprolegniaceae sp.,No clade information ,OTU104 Saprolegniaceae sp.,Unknown
+OTU105,KY985300,99.543,3.82E-108,401,Pythium yorkensis,Pythium nodosum,Clade J,OTU105 Pythium nodosum,Non-Pathogenic to soybean
+OTU106,HQ643126,86.818,5.30E-57,231,Apodachlya minima,Oomycetes sp.,No clade information ,OTU106 Oomycetes sp.,Unknown
+OTU107,HQ111473,87.135,3.24E-44,189,Lagenidium sp. PWL-2010g,Lagenidium giganteum,No clade information ,OTU107 Lagenidium giganteum,Putative entomoparasite
+OTU108,MF095138,100,2.95E-109,405,uncultured Hyaloperonospora,Hyaloperonospora nesliae,No clade information ,OTU108 Hyaloperonospora nesliae,Unknown
+OTU109,KT257379,83.478,1.16E-48,204,Lagenidium sp. SL10,Oomycetes sp.,No clade information ,OTU109 Oomycetes sp.,Unknown
+OTU110,MK192845,81.481,1.53E-32,150,uncultured Apodachlya,Oomycota sp.,No clade information ,OTU110 Oomycota sp.,Unknown
+OTU111,KJ716869,86.486,4.10E-58,235,Lagena radicicola,Pythium sp.,No clade information ,OTU111 Pythium sp.,Unknown
+OTU112,HQ643969,98.174,1.38E-102,383,Pythium violae,Pythium violae,Pythium Clade B,OTU112 Pythium violae,Unknown
+OTU113,MF446838,78.448,1.54E-27,134,Pythium intermedium,Oomycetes sp.,No clade information ,OTU113 Oomycetes sp.,Unknown
+OTU114,KX266867,99.543,1.37E-107,399,Pythium volutum,Pythium aff volutum,Pythium Clade B,OTU114 Pythium aff volutum,Unknown
+OTU115,HQ643112,81.132,1.20E-23,121,Aphanomyces cladogamus,Oomycetes sp.,No clade information ,OTU115 Oomycetes sp.,Unknown
+OTU117,MF615281,99.543,3.82E-108,401,Phytophthora sp. WM-2018a,Phytophthora megasperma,Phytophthora Clade 6,OTU117 Phytophthora megasperma,Non-Pathogenic to soybean
+OTU119,KX788841,100,2.95E-109,405,Pythium ultimum var. sporangiiferum,Pythium ultimum var sporangiiferum,Pythium Clade I,OTU119 Pythium ultimum var sporangiiferum,Pathogenic to soybean
+OTU120,KT257370,100,2.95E-109,405,Lagenidium sp. SL23,Lagenidium giganteum,No clade information ,OTU120 Lagenidium giganteum,Putative entomoparasite
+OTU121,KR869810,89.362,5.57E-22,115,Blastulidium paedophthorum,Oomycetes sp.,No clade information ,OTU121 Oomycetes sp.,Unknown
+OTU122,AY198256,93.182,2.57E-25,126,Hyaloperonospora arabidis-alpinae,Oomycetes sp.,No clade information ,OTU122 Oomycetes sp.,Unknown
+OTU123,KT935287,85.294,4.28E-28,135,Phragmosporangium uniseriatum,Oomycota sp.,No clade information ,OTU123 Oomycota sp.,Unknown
+OTU124,KJ716869,84.091,1.50E-47,200,Lagena radicicola,Pythium sp.,No clade information ,OTU124 Pythium sp.,Unknown
+OTU125,KT337695,100,2.95E-109,405,Pythium sp. C31,Pythium sp nov,Pythium Clade E,OTU125 Pythium sp nov,Unknown
+OTU127,HQ643125,85.202,1.49E-52,217,Apodachlya brachynema,Oomycetes sp.,No clade information ,OTU127 Oomycetes sp.,Unknown
+OTU128,AB299388,99.087,6.39E-106,394,Pythium iwayamai,Pythium sp.,Pythium Clade G,OTU128 Pythium sp. Clade G,Unknown
+OTU130,HQ643125,87.892,1.46E-62,250,Apodachlya brachynema,Apodachlya brachynema,No clade information ,OTU130 Apodachlya brachynema,Unknown
+OTU132,AY598649,95.455,1.82E-91,346,Pythium okanoganense,Pythium okanoganense,Pythium Clade G,OTU132 Pythium okanoganense,Unknown
+OTU135,KX353798,97.653,5.01E-97,364,Plectospira myriandra,Saprolegniaceae sp.,No clade information ,OTU135 Saprolegniaceae sp.,Unknown
+OTU136,KJ716869,93.519,1.10E-83,320,Lagena radicicola,Pythium sp.,No clade information ,OTU136 Pythium sp.,Unknown
+OTU137,FJ415969,100,2.95E-109,405,Phytopythium litorale,Phytopythium litorale,Phytopythium,OTU137 Phytopythium litorale,Pathogenic to soybean
+OTU139,MH620102,99.541,4.94E-107,398,Phytophthora iranica,Phytophthora iranica,Phytophthora Clade 1,OTU139 Phytophthora iranica,Unknown
+OTU140,MK192845,100,1.08E-93,353,uncultured Apodachlya,Apodachlya brachynema,No clade information ,OTU140 Apodachlya brachynema,Unknown
+OTU141,LC204340,83.784,1.93E-46,196,uncultured fungus,Oomycota sp.,No clade information ,OTU141 Oomycota sp.,Unknown
+OTU144,KT338137,98.565,1.08E-98,370,Pythium sp. unique1sub3,Pythium sp.,No clade information ,OTU144 Pythium sp.,Unknown
+OTU145,KC495031,100,2.95E-109,405,Hyaloperonospora nasturtii-aquatici,Hyaloperonospora nesliae,No clade information ,OTU145 Hyaloperonospora nesliae,Unknown
+OTU147,MK192839,99.543,1.37E-107,399,uncultured Pythium,Pythium sp.,No clade information ,OTU147 Pythium sp.,Unknown
+OTU150,MK192848,92.632,4.28E-28,135,uncultured Pythium,Oomycetes sp.,No clade information ,OTU150 Oomycetes sp.,Unknown
+OTU151,MG799199,95.041,3.24E-44,189,Pythium kashmirense,Pythium sp.,No clade information ,OTU151 Pythium sp.,Unknown
+OTU154,MG552104,100,8.33E-100,374,Plasmopara viticola,Plasmopara sp.,No clade information ,OTU154 Plasmopara sp.,Unknown
+OTU155,MK326456,100,2.95E-109,405,Pythium perplexum,Pythium perplexum,Pythium Clade J,OTU155 Pythium perplexum,Non-Pathogenic to soybean
+OTU157,AB581487,99.476,5.05E-92,348,uncultured fungus,Oomycetes sp.,No clade information ,OTU157 Oomycetes sp.,Unknown
+OTU158,MF446764,99.543,1.37E-107,399,Phytophthora tentaculata,Pythium sp.,No clade information ,OTU158 Pythium sp.,Unknown
+OTU159,KY822517,99.087,6.39E-106,394,uncultured Oomycetes,Pythium sp.,No clade information ,OTU159 Pythium sp.,Unknown
+OTU162,KX353798,95.305,3.93E-88,335,Plectospira myriandra,Saprolegniaceae sp.,No clade information ,OTU162 Saprolegniaceae sp.,Unknown
+OTU163,KU863599,89.634,3.21E-49,206,uncultured Oomycetes,Pythium sp.,No clade information ,OTU163 Pythium sp.,Unknown
+OTU165,MF182887,100,2.95E-109,405,Albugo candida,Albugo candida,No clade information ,OTU165 Albugo candida,Unknown
+OTU167,AY598697,100,2.95E-109,405,Pythium parvum,Pythium parvum,Pythium Clade E,OTU167 Pythium parvum,Unknown
+OTU168,HQ111471,92.991,2.38E-80,309,Lagenidium sp. PWL-2010i,Oomycota sp.,No clade information ,OTU168 Oomycota sp.,Unknown
+OTU170,MK192840,92.273,2.38E-80,309,uncultured Lagenidium,Oomycota sp.,No clade information ,OTU170 Oomycota sp.,Unknown
+OTU172,EF126334,89.545,2.42E-70,276,Saprolegnia bulbosa,Pythium sp.,No clade information ,OTU172 Pythium sp.,Unknown
+OTU174,KT257379,85.593,5.30E-57,231,Lagenidium sp. SL10,Oomycetes sp.,No clade information ,OTU174 Oomycetes sp.,Unknown
+OTU177,HQ111470,95.69,4.19E-43,185,Lagenidium sp. PWL-2010h,Pythium sp.,No clade information ,OTU177 Pythium sp.,Unknown
+OTU178,EF174906,100,1.06E-108,403,Peronospora medicaginis-orbicularis,Peronospora sp.,No clade information ,OTU178 Peronospora sp.,Unknown
+OTU179,EF614955,96.804,1.80E-96,363,Peronospora farinosa f. sp. chenopodii,Peronospora sp.,No clade information ,OTU179 Peronospora sp.,Unknown
+OTU180,KT337687,99.043,2.32E-100,375,Pythium sp. B65,Pythium sp.,No clade information ,OTU180 Pythium sp.,Unknown
+OTU181,AY598717,100,2.95E-109,405,Pythium violae,Brevilegnia macrospora,No clade information ,OTU181 Brevilegnia macrospora,Unknown
+OTU183,AB444140,97.26,3.00E-99,372,Pythium grandisporangium,Pythium grandisporangium,Pythium Clade C,OTU183 Pythium grandisporangium,Unknown
+OTU184,AY198284,100,2.95E-109,405,Peronospora arthurii,Peronospora sp.,No clade information ,OTU184 Peronospora sp.,Unknown
+OTU185,KT257366,83.628,5.38E-47,198,Lagenidium deciduum,Oomycetes sp.,No clade information ,OTU185 Oomycetes sp.,Unknown
+OTU186,AB468817,99.543,1.37E-107,399,Pythium okanoganense,Pythium okanoganense,Pythium Clade G,OTU186 Pythium okanoganense,Unknown
+OTU188,KY822517.1,77,6.00E-37,166,Uncultured Oomycetes,Oomycete sp. ,No clade information ,OTU188 Oomycete sp. ,Unknown
+OTU190,MF095151,100,2.95E-109,405,uncultured Peronospora,Peronospora sp.,No clade information ,OTU190 Peronospora sp.,Unknown
+OTU191,KJ716873,87.727,8.81E-60,241,Lagenidium sp. SLG-2014b,Pythium sp.,No clade information ,OTU191 Pythium sp.,Unknown
+OTU194,KU211082,93.506,2.00E-21,113,Pythiogeton sp.,Pythiales sp.,No clade information ,OTU194 Pythiales sp.,Unknown
+OTU195,AY198277,100,2.95E-109,405,Peronospora paula,Peronosporaceae sp.,No clade information ,OTU195 Peronosporaceae sp.,Unknown
+OTU196,HQ191349,91.86,4.31E-23,119,uncultured stramenopile,Oomycota sp.,No clade information ,OTU196 Oomycota sp.,Unknown
+OTU197,MK192840,91.441,1.43E-77,300,uncultured Lagenidium,Oomycota sp.,No clade information ,OTU197 Oomycota sp.,Unknown
+OTU201,MH094548,87.556,4.07E-63,252,Paralagenidium karlingii,Oomycetes sp.,No clade information ,OTU201 Oomycetes sp.,Unknown
+OTU205,HQ436095,98.122,3.00E-99,372,uncultured fungus,Pythium sp.,No clade information ,OTU205 Pythium sp.,Unknown
+OTU207,MF446728,91.915,5.12E-82,315,Pythiogeton zizaniae,Oomycota sp.,No clade information ,OTU207 Oomycota sp.,Unknown
+OTU211,MF693897,100,2.95E-109,405,Peronospora cf. viciae,Peronospora sp.,No clade information ,OTU211 Peronospora sp.,Unknown
+OTU213,HQ643125,83.871,9.00E-45,191,Apodachlya brachynema,Oomycetes sp.,No clade information ,OTU213 Oomycetes sp.,Unknown
+OTU219,DQ500141,100,2.95E-109,405,"Peronospora sp. isolate 079403,57 (BR)",Peronospora sp.,No clade information ,OTU219 Peronospora sp.,Unknown
+OTU220,JQ976041,99.543,1.37E-107,399,uncultured Oomycetes,Hyaloperonospora sp.,No clade information ,OTU220 Hyaloperonospora sp.,Unknown
+OTU221,AB796297,94.545,1.52E-37,167,Pythium splendens,Oomycetes sp.,No clade information ,OTU221 Oomycetes sp.,Unknown
+OTU222,KP843599,91.489,1.99E-26,130,Pythium marsipium,Pythium sp.,No clade information ,OTU222 Pythium sp.,Unknown
+OTU224,KT257373,99.087,6.39E-106,394,Myzocytiopsis sp. venatrix,Oomycetes sp.,No clade information ,OTU224 Oomycetes sp.,Unknown
+OTU228,KT257477,95.89,3.02E-94,355,Lagenidium giganteum f. caninum,Lagenidium giganteum,No clade information ,OTU228 Lagenidium giganteum,Putative entomoparasite
+OTU230,MK192856,100,3.90E-93,351,uncultured Pythium,Pythium sp.,No clade information ,OTU230 Pythium sp.,Unknown
+OTU231,AY455774,75.799,7.26E-16,95.3,Aphanomyces stellatus,Oomycota sp.,No clade information ,OTU231 Oomycota sp.,Unknown
+OTU236,AY598659,98.63,2.97E-104,388,Pythium buismaniae,Pythium aff polymastum,Pythium Clade J,OTU236 Pythium aff polymastum,Unknown
+OTU237,AY598649,95.909,1.40E-92,350,Pythium okanoganense,Pythium okanoganense,Pythium Clade G,OTU237 Pythium okanoganense,Unknown
+OTU238,KC741470,100,2.95E-109,405,Lagenidium aff. deciduum strain LEV5864,Lagenidium giganteum,No clade information ,OTU238 Lagenidium giganteum,Putative entomoparasite
+OTU239,KT257370,93.258,1.99E-26,130,Lagenidium sp. SL23,Oomycota sp.,No clade information ,OTU239 Oomycota sp.,Unknown
+OTU242,MK011109,100,2.95E-109,405,Pythium intermedium,Pythium intermedium,Pythium Clade F,OTU242 Pythium intermedium,Pathogenic to soybean
+OTU243,MK192839,94.57,8.45E-90,340,uncultured Pythium,Pythium sp.,No clade information ,OTU243 Pythium sp.,Unknown
+OTU246,AY198241,100,2.95E-109,405,Peronospora grisea,Oomycetes sp.,No clade information ,OTU246 Oomycetes sp.,Unknown
+OTU247,KU892280,93.396,6.62E-81,311,Oomycetes sp. NF-4,Pythiaceae sp.,No clade information ,OTU247 Pythiaceae sp.,Unknown
+OTU248,FJ794906,93.671,1.55E-22,117,Saprolegnia sp. SAP1,Oomycetes sp.,No clade information ,OTU248 Oomycetes sp.,Unknown
+OTU249,HQ643126,83.945,1.93E-46,196,Apodachlya minima,Oomycetes sp.,No clade information ,OTU249 Oomycetes sp.,Unknown
+OTU250,KF831230,87.946,8.75E-65,257,Pythium sp. BP 2013c,Pythium sp.,No clade information ,OTU250 Pythium sp.,Unknown
+OTU252,HQ643709,100,2.95E-109,405,Pythium nodosum,Pythium nodosum,Pythium Clade J,OTU252 Pythium nodosum,Non-Pathogenic to soybean
+OTU253,KP862942,99.087,6.39E-106,394,Pythium camurandrum,Pythium camurandrum,Pythium Clade E,OTU253 Pythium camurandrum,Non-Pathogenic to soybean
+OTU254,MF372507,97.717,2.32E-100,375,Peronospora sp.,Oomycetes sp.,No clade information ,OTU254 Oomycetes sp.,Unknown
+OTU264,MK192848,100,2.95E-109,405,uncultured Pythium,Pythium sp.,No clade information ,OTU264 Pythium sp.,Unknown
+OTU265,GQ337920,86.283,4.10E-58,235,Pythium attrantheridium,Pythium aff attrantheridium,Pythium Clade F,OTU265 Pythium aff attrantheridium,Unknown
+OTU271,HQ643816,97.596,8.39E-95,357,Pythium sp. CAL-2011f,Pythium sp.,Pythium Clade B,OTU271 Pythium sp. Clade B,Unknown
+OTU274,AY243082,93.333,1.21E-13,87.9,Globisporangium spinosum,Oomycetes sp.,No clade information ,OTU274 Oomycetes sp.,Unknown
+OTU279,LC168846,100,2.95E-109,405,Pythium megalacanthum,Pythium sp jasmonium,Pythium Clade J,OTU279 Pythium sp jasmonium,Unknown
+OTU280,AY198248,86.667,6.96E-46,195,Peronospora alta,Oomycetes sp.,No clade information ,OTU280 Oomycetes sp.,Unknown
+OTU283,GU292155,99.543,1.37E-107,399,Albugo hohenheimia,Albugo candida,No clade information ,OTU283 Albugo candida,Unknown
+OTU288,KT935287,90.278,3.12E-69,272,Phragmosporangium uniseriatum,Saprolegniaceae sp.,No clade information ,OTU288 Saprolegniaceae sp.,Unknown
+OTU290,KF275667,98.585,8.33E-100,374,Lagenidium sp. CICR-Hop,Oomycota sp.,No clade information ,OTU290 Oomycota sp.,Unknown
+OTU293,FJ794896,84.906,8.94E-50,207,Aphanomyces sp. APH2,Oomycetes sp.,No clade information ,OTU293 Oomycetes sp.,Unknown
+OTU299,KP862942,94.545,3.04E-89,339,Pythium camurandrum,Pythium camurandrum,Pythium Clade E,OTU299 Pythium camurandrum,Non-Pathogenic to soybean
+OTU303,MF066364,89.744,1.56E-17,100,Crypticola clavulifera,Oomycota sp.,No clade information ,OTU303 Oomycota sp.,Unknown
+OTU307,KU210822,81.944,2.59E-20,110,Pythium heterothallicum,Oomycota sp.,No clade information ,OTU307 Oomycota sp.,Unknown
+OTU309,KT337686,99.087,6.39E-106,394,Pythium middletonii,Pythium sp.,Pythium Clade E,OTU309 Pythium sp. Clade E,Unknown
+OTU311,KU210457,99.543,1.37E-107,399,Globisporangium paroecandrum,Pythium sp.,Pythium Clade F,OTU311 Pythium sp. Clade F,Unknown
+OTU321,HQ643561,97.333,6.44E-101,377,Pythium heterothallicum,Pythium heterothallicum,Pythium Clade I,OTU321 Pythium heterothallicum,Pathogenic to soybean
+OTU323,AB581487,97.906,5.08E-87,331,uncultured fungus,Oomycetes sp.,No clade information ,OTU323 Oomycetes sp.,Unknown
+OTU336,KY822454,99.39,1.85E-76,296,uncultured Oomycetes,Saprolegniaceae sp.,No clade information ,OTU336 Saprolegniaceae sp.,Unknown
+OTU337,KT257370,95.434,1.40E-92,350,Lagenidium sp. SL23,Lagenidium giganteum,No clade information ,OTU337 Lagenidium giganteum,Putative entomoparasite
+OTU340,AB581396,96.135,3.04E-89,339,uncultured fungus,Oomycetes sp.,No clade information ,OTU340 Oomycetes sp.,Unknown
+OTU343,AY598649,94.091,1.83E-86,329,Pythium okanoganense,Pythium okanoganense,Pythium Clade G,OTU343 Pythium okanoganense,Unknown
+OTU345,MK192853,99.543,1.37E-107,399,uncultured Myzocytiopsis,Oomycetes sp.,No clade information ,OTU345 Oomycetes sp.,Unknown
+OTU349,KJ995580,98.077,5.01E-97,364,Pythium junctum,Pythium sp.,No clade information ,OTU349 Pythium sp.,Unknown
+OTU355,MK326555,96.804,1.39E-97,366,Pythium ultimum var. ultimum,Pythium ultimum var ultimum,Pythium Clade I,OTU355 Pythium ultimum var ultimum,Pathogenic to soybean
+OTU361,MF948666,94.521,3.04E-89,339,Pythium irregulare,Pythium irregulare,Pythium Clade F,OTU361 Pythium irregulare,Pathogenic to soybean
+OTU363,MK326451,97.273,3.00E-99,372,Phytophthora sansomea,Phytophthora sansomeana,Phytophthora Clade 8,OTU363 Phytophthora sansomeana,Pathogenic to soybean
+OTU366,MK124136,95.434,1.40E-92,350,Pythium heterothallicum,Pythium sp.,Pythium Clade I,OTU366 Pythium sp. Clade I,Unknown
+OTU368,MK326555,97.884,6.58E-86,327,Pythium ultimum var. ultimum,Pythium ultimum var ultimum,Pythium Clade I,OTU368 Pythium ultimum var ultimum,Pathogenic to soybean
+OTU369,DQ665668,86.449,1.47E-57,233,Plasmopara viticola,Oomycota sp.,No clade information ,OTU369 Oomycota sp.,Unknown
+OTU372,KR869810.1,79,5.00E-19,105,Blastulidium paedophthorum,Oomycota sp.,No clade information ,OTU 372 Oomycota sp. ,Unknown
+OTU380,KX353798,92.593,3.99E-78,302,Plectospira myriandra,Plectospira myriandra,No clade information ,OTU380 Plectospira myriandra,Unknown
+OTU385,MG799207,99.543,1.37E-107,399,Pythium acanthicum,Pythium acanthicum,Pythium Clade D,OTU385 Pythium acanthicum,Putative mycoparasite
+OTU388,HQ643126,85.646,2.49E-50,209,Apodachlya minima,Apodachlya sp.,No clade information ,OTU388 Apodachlya sp.,Unknown
+OTU392,AB562497,95.434,1.40E-92,350,Pythium ultimum var. ultimum,Pythium ultimum var ultimum,Pythium Clade I,OTU392 Pythium ultimum var ultimum,Pathogenic to soybean
+OTU410,KF803253,93.636,1.96E-36,163,Pythium senticosum,Pythium sp.,No clade information ,OTU410 Pythium sp.,Unknown
+OTU411,KP843570,98.558,1.39E-97,366,Pythium chondricola,Pythium sp.,Pythium Clade A,OTU411 Pythium sp. Clade A,Unknown
+OTU412,AY742740,99.543,1.37E-107,399,Peronospora manshurica,Peronospora sp.,No clade information ,OTU412 Peronospora sp.,Unknown
+OTU426,MK192844,99.465,8.45E-90,340,uncultured Lagenidium,Pythium sp.,No clade information ,OTU426 Pythium sp.,Unknown
+OTU436,AY598646,100,2.95E-109,405,Pythium macrosporum,Pythium sp.,Pythium Clade F,OTU436 Pythium sp. Clade F,Unknown
+OTU440,KP862942,95.455,1.40E-92,350,Pythium camurandrum,Pythium camurandrum,Pythium Clade E,OTU440 Pythium camurandrum,Unknown
+OTU441,AY598621,96.804,1.80E-96,363,Pythium monospermum,Pythium monospermum,Pythium Clade A,OTU441 Pythium monospermum,Non-Pathogenic to soybean
+OTU447,AB581487,94.764,5.16E-77,298,uncultured fungus,Pythiaceae sp.,No clade information ,OTU447 Pythiaceae sp.,Unknown
+OTU481,HQ643809,99.543,1.37E-107,399,Pythium sp. CAL-2011f,Pythium sp nov,Pythium Clade B,OTU481 Pythium sp nov,Unknown
+OTU492,HQ643095,100,2.97E-104,388,Achlya flagellata,Achlya sp.,No clade information ,OTU492 Achlya sp.,Unknown
+OTU494,KU211392,96.804,1.39E-97,366,Pythium heterothallicum,Pythium heterothallicum,Pythium Clade I,OTU494 Pythium heterothallicum,Pathogenic to soybean
+OTU499,MK326540,96.804,1.39E-97,366,Pythium attrantheridium,Pythium sp.,Pythium Clade F,OTU499 Pythium sp. Clade F,Unknown
+OTU510,KT726403,88.152,1.89E-61,246,Pythium sp. 1 ROH-2015,Pythiaceae sp.,No clade information ,OTU510 Pythiaceae sp.,Unknown
+OTU535,KT337808,95.238,5.08E-87,331,Pythium sp. unique1,Pythium monospermum,Pythium Clade A,OTU535 Pythium monospermum,Non-Pathogenic to soybean
+OTU536,MK124136,93.607,6.58E-86,327,Pythium heterothallicum,Pythium heterothallicum,Pythium Clade I,OTU536 Pythium heterothallicum,Pathogenic to soybean
+OTU537,KJ995580,95.261,3.93E-88,335,Pythium junctum,Pythium sp.,No clade information ,OTU537 Pythium sp.,Unknown
+OTU549,MK326555,98.413,1.41E-87,333,Pythium ultimum var. ultimum,Pythium ultimum var ultimum,Pythium Clade I,OTU549 Pythium ultimum var ultimum,Pathogenic to soybean
+OTU556,KX671053,90.984,2.54E-35,159,Pythium myriotylum,Pythium sp.,No clade information ,OTU556 Pythium sp.,Unknown
+OTU560,HQ643822,99.519,1.79E-101,379,Pythium sp. CAL-2011f,Pythium sp.,Pythium Clade B,OTU560 Pythium sp. Clade B,Unknown
+OTU563,MK326467,100,3.85E-103,385,Pythium inflatum,Pythium inflatum,Pythium Clade B,OTU563 Pythium inflatum,Non-Pathogenic to soybean
+OTU569,AY598717,96.804,5.01E-97,364,Pythium violae,Brevilegnia macrospora,No clade information ,OTU569 Brevilegnia macrospora,Unknown
+OTU573,MK326555,95.89,3.02E-94,355,Pythium ultimum var. ultimum,Pythium ultimum var ultimum,Pythium Clade I,OTU573 Pythium ultimum var ultimum,Pathogenic to soybean
+OTU574,KT337808,96.729,3.90E-93,351,Pythium sp. unique1,Pythium monospermum,Pythium Clade A,OTU574 Pythium monospermum,Non-Pathogenic to soybean
+OTU575,DQ643845,99.543,1.37E-107,399,Peronospora effusa,Oomycetes sp.,No clade information ,OTU575 Oomycetes sp.,Unknown
+OTU582,MK124136,96.347,6.48E-96,361,Pythium heterothallicum,Pythium glomeratum,Pythium Clade I,OTU582 Pythium glomeratum,Non-Pathogenic to soybean

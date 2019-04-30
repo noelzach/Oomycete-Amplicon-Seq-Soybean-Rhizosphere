@@ -1,0 +1,2139 @@
+---
+title: "Analysis"
+author: "Zachary Noel"
+date: "12/11/2016"
+output:
+  md_document:
+    variant: markdown_github
+  html_document: default
+  word_document: default
+---
+
+Some of the following code was adapted from the EDAMAME workshop at Michigann State University 
+* Found here: [https://github.com/raleva/Edamame_phyloseq/blob/master/Edamame_phyloseq.Rmd](https://github.com/raleva/Edamame_phyloseq/blob/master/Edamame_phyloseq.Rmd)
+
+```{r Source}
+library(ggplot2)
+source("functions_themes.R")
+```
+
+##Libraries
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#source('http://bioconductor.org/biocLite.R')
+#biocLite('phyloseq')
+#packageVersion('phyloseq')
+#library(phyloseq)
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+ #   install.packages("BiocManager")
+#BiocManager::install("microbiome", version = "3.8")
+#library(microbiome)
+#library(devtools)
+#devtools::install_github("benjjneb/decontam")
+#library(decontam)
+
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+ #   install.packages("BiocManager")
+#BiocManager::install("RCy3", version = "3.8")
+library(RCy3)
+
+packages <- c("biomformat", "qiimer", "MASS", "ape", "ggplot2", "plyr", "indicspecies", "labdsv", "dplyr", "reshape", "vegan", "metacoder", "DESeq2", "emmeans", "ggpmisc", "ggpubr", "tidyverse", "doParallel", "DT", "exactRankTests", "foreach", "Rcpp", "shiny", "coin", "microbiome", "ggsci", "phyloseq", "devtools", "decontam", "cowplot", "lme4", "ancom.R", "ggforce", "ggrepel", "venn", "exactRankTests", "nlme", "SpiecEasi", "RCy3", "igraph")
+ipak(packages)
+
+packageVersion("vegan")
+packageVersion('phyloseq')
+packageVersion('indicspecies')
+ citation("vegan") 
+#library(vegan, lib.loc = "/Library/Frameworks/R.framework/Versions/3.3/Resources/library")
+
+```
+
+##Loading data: you need the biom file, the mapping file, and the taxonomy file
+```{r load data}
+#Loading the mapping file
+samp_dat <- read.table("../../input_files/mapping_file.txt", header = F)
+colnames(samp_dat) <- c("SampleID",
+                        "BarcodeSequence",
+                        "LinkerPrimerSequence",
+                        "Region",
+                        "barcode_primer_name",
+                        "BC_plate",
+                        "Extraction_plate",
+                        "row",
+                        "column",
+                        "location",
+                        "year",
+                        "sample_type",
+                        "pass",
+                        "range",
+                        "mgperroot",
+                        "stand_v1",
+                        "stand_v3",
+                        "insectinc",
+                        "split",
+                        "sevsplit",
+                        "height",
+                        "lodging",
+                        "fieldwt",
+                        "moisture",
+                        "bu_acre",
+                        "seedtreatment",
+                        "variety",
+                        "company",
+                        "rep",
+                        "SeedlingsNotEmerge",
+                        "Description")
+rownames(samp_dat) <- samp_dat$SampleID #row names must match OTU table headers
+SAMP <- phyloseq::sample_data(samp_dat)
+
+# biom file
+biom <- biomformat::read_biom("../../input_files/otu_table_tax_json_withFungi.biom")
+
+OTU <- phyloseq::otu_table(as(biomformat::biom_data(biom), "matrix"), taxa_are_rows = TRUE)
+
+# taxonomy file
+taxonomy<-read.csv("../../input_files/consensus_taxonomy.csv", header=T, na.strings = "")
+taxonomy[] <- lapply(taxonomy, as.character)
+rownames(taxonomy) <- taxonomy$OTU_ID
+taxonomy <- taxonomy[,-1]
+str(taxonomy)
+
+taxonomy <- taxonomy %>% replace_na(list(Kingdom = "unidentified",
+                             Phylum = "unidentified",
+                             Class = "unidentified",
+                             Order = "unidentified",
+                             Family = "unidentified",
+                             Genus = "unidentified",
+                             Species = "unidentified"))
+
+head(taxonomy)
+
+TAX <- phyloseq::tax_table(as.matrix(taxonomy))
+```
+
+##Create a phyloseq object
+```{r myphy}
+myphy <- phyloseq::phyloseq(OTU, TAX, SAMP)
+```
+
+##Univariate Plant Health data
+-In order to be consistent with Rossman et al, 2018 I am going to convert the stand count data to an estimated plants per meter squared
+-The row spacing was 30 inches (0.76 m) and plots were 20 ft (6.1 m) long = area of 4.636 m squared
+-divide that by 2 to get the area per row = 2.3 m squared 
+-So if we divide everying by 2.3, we will match up with what was reported in Rossman et al. 2018. 
+-Converting bushels soybeans per acre also will match up with the reported Kg / hectare in Rossman et al. 2018 by dividing bu_acre by 0.01486 
+
+```{r Defining interactions and converting to imperial units}
+myphy@sam_data$plantdensity <- myphy@sam_data$stand_v1/2.3
+myphy@sam_data$kg_ha <- myphy@sam_data$bu_acre/0.0148696572965081
+samples <- data.frame(sample_data(myphy))
+samples$locationXyearXcompany <- interaction(samples$company, samples$location, samples$year)
+samples$locationXcompany <- interaction(samples$location, samples$company)
+samples$locationXyearXvariety <- interaction(samples$variety, samples$location, samples$year)
+samples$locationXyear <- interaction(samples$location, samples$year)
+```
+
+Testing the effect of plant genotype on plant density, root biomass and yield 
+-I am going to use only NTC to take out potentially any influence of the seedtreatment
+```{r NTC Subset}
+samples.NTC <- samples %>%
+  filter(seedtreatment == "NTC") %>%
+  select(location, year, variety, plantdensity, rep, mgperroot, kg_ha) 
+```
+
+Set up the linear model with Rep as a random effect
+```{r PlantDens:Location_NTC}
+lm.plantdensity <- lmer(plantdensity ~ location*year + (1|rep), data = samples.NTC)
+car::Anova(lm.plantdensity) 
+```
+Most variation comes from the location year interaction, not variety so I am going to focus on this interaction. 
+
+Constrast the effect of location within year
+```{r Contrasts location within year}
+lsmeans.plant.health <- emmeans(lm.plantdensity, ~location|year) # estimate lsmeans of variety within siteXyear
+Results_lsmeansEC <- emmeans::cld(lsmeans.plant.health, alpha = 0.05, adjust = "tuk", reversed = TRUE, details = TRUE) # contrast with Tukey ajustment
+Results_lsmeansEC
+```
+
+```{r biomass:Location_NTC}
+lm.plantdensity <- lmer(mgperroot ~ location*year + (1|rep), data = samples.NTC)
+car::Anova(lm.plantdensity) 
+```
+Most variation comes from the location year interaction, not variety so I am going to focus on this interaction. 
+
+Constrast the effect of location within year
+```{r Contrasts location within year}
+lsmeans.plant.health <- emmeans(lm.plantdensity, ~location|year) # estimate lsmeans of variety within siteXyear
+Results_lsmeansEC <- emmeans::cld(lsmeans.plant.health, alpha = 0.05, adjust = "tuk", reversed = TRUE, details = TRUE) # contrast with Tukey ajustment
+Results_lsmeansEC
+```
+
+```{r Kgha:Location_NTC}
+lm.plantdensity <- lmer(kg_ha ~ location*year + (1|rep), data = samples.NTC)
+car::Anova(lm.plantdensity) 
+```
+Most variation comes from the location year interaction, not variety so I am going to focus on this interaction. 
+
+Constrast the effect of location within year
+```{r Contrasts location within year}
+lsmeans.plant.health <- emmeans(lm.plantdensity, ~location|year) # estimate lsmeans of variety within siteXyear
+Results_lsmeansEC <- emmeans::cld(lsmeans.plant.health, alpha = 0.05, adjust = "tuk", reversed = TRUE, details = TRUE) # contrast with Tukey ajustment
+Results_lsmeansEC
+```
+
+Testing effect of location, year, seed treatment and variety on plant density, root biomass, and yield
+```{r Plant Density:Seedtreatment}
+lm.plantdensity <- lmer(plantdensity ~ location*year*variety*seedtreatment + (1|rep), data = samples)
+anova(lm.plantdensity) 
+```
+
+```{r Plots: Location year}
+A <-samples %>%
+    filter(seedtreatment == "NTC") %>%
+    select(locationXcompany, location, company, plantdensity, mgperroot, year) %>%
+    ggplot(aes(x = location, y = plantdensity)) + 
+    geom_boxplot(alpha = 0.3) +
+    facet_grid(~year, scales = "free", space = "free_x", drop = TRUE) +
+    stat_compare_means(method = "t.test", label.x = 0.7)  + 
+    geom_jitter(alpha = 0.3) + 
+    theme_bw() +
+    my.theme + 
+    xlab("") +
+    ylab(expression(bold("Plant Density (plants m"^-2~")")))
+mean(A$data$plantdensity[A$data$location == "Allegan"])
+mean(A$data$plantdensity[A$data$location == "Ingham"])
+
+B <-samples %>%
+    filter(seedtreatment == "NTC") %>%
+    select(locationXcompany, location, company, plantdensity, mgperroot, year) %>%
+    ggplot(aes(x = location, y = mgperroot)) + 
+    geom_boxplot(alpha = 0.3) +
+    facet_grid(~year, scales = "free", space = "free_x", drop = TRUE) +
+    stat_compare_means(method = "t.test", label.x = 1.5)  +  
+    geom_jitter(alpha = 0.3) + 
+    theme_bw() +
+    my.theme + 
+    xlab("") + 
+    ylab(expression(bold("Root Biomass (mg plant"^-1~")")))
+
+C <-samples %>%
+    filter(seedtreatment == "NTC") %>%
+    select(locationXcompany, location, company, plantdensity, mgperroot, year, kg_ha) %>%
+    ggplot(aes(x = location, y = kg_ha)) + 
+    geom_boxplot(alpha = 0.3) +
+    facet_grid(~year, scales = "free", space = "free_x", drop = TRUE) +
+    stat_compare_means(method = "t.test")  +  
+    geom_jitter(alpha = 0.3) + 
+    theme_bw() +
+    my.theme + 
+    xlab("") + 
+    ylab(expression(bold("Yield (Kg ha"^-1~")")))
+
+plot_grid(A, B, C, labels = "AUTO", ncol = 1)
+```
+
+Now I am going to test the effecet of seedtreatment within location, year and variety. 
+```{r Plant Density:Seedtreatment}
+lm.plantdensity <- lmer(plantdensity ~ location*year*variety*seedtreatment + (1|rep), data = samples)
+car::Anova(lm.plantdensity) 
+lsmeans.plant.health <- emmeans(lm.plantdensity, ~seedtreatment|variety|location|year) # estimate lsmeans of variety within siteXyear
+Results_lsmeansEC <- emmeans::cld(lsmeans.plant.health, alpha = 0.05, adjust = "tuk", Letters = letters, reversed = TRUE, details = TRUE) # contrast with Tukey ajustment
+Results_lsmeansEC
+```
+
+```{r Root mass:Seedtreatment}
+lm.biomass <- lmer(mgperroot ~ location*year*variety*seedtreatment + (1|rep), data = samples)
+anova(lm.biomass) 
+lsmeans.plant.health <- emmeans(lm.biomass, ~seedtreatment|variety|location|year) # estimate lsmeans of variety within siteXyear
+Results_lsmeansEC <- emmeans::cld(lsmeans.plant.health, alpha = 0.05, adjust = "tuk", Letters = letters, reversed = TRUE, details = TRUE) # contrast with Tukey ajustment
+Results_lsmeansEC
+```
+
+```{r Yield:Seedtreatment}
+lm.yield <- lmer(kg_ha ~ location*year*company*seedtreatment + (1|rep), data = samples)
+anova(lm.yield) 
+lsmeans.plant.health <- emmeans(lm.yield, ~seedtreatment|company|location|year) # estimate lsmeans of variety within siteXyear
+Results_lsmeansEC <- emmeans::cld(lsmeans.plant.health, alpha = 0.05, adjust = "tuk", Letters = letters, reversed = TRUE, details = TRUE) # contrast with Tukey ajustment
+Results_lsmeansEC
+```
+
+```{r Cell Means}
+means.plant.health <- samples %>%
+  group_by(location, year, variety, seedtreatment) %>%
+  summarise(Mean.plantdens = mean(plantdensity, na.rm=TRUE), 
+            STDERR.plantdens = sd(plantdensity, na.rm=TRUE)/sqrt(n()),
+            Mean.biomass = mean(mgperroot, na.rm=TRUE), 
+            STDERR.biomass = sd(mgperroot, na.rm=TRUE)/sqrt(n()), 
+            Mean.kg_ha = mean(kg_ha, na.rm=TRUE), 
+            STDERR.kg_ha = sd(kg_ha, na.rm=TRUE)/sqrt(n())) %>%
+  mutate_if(is.numeric, round, 2)
+
+#write.csv(means.plant.health, "means_planthealth.csv")
+```
+
+```{r Plots: Plant Health}
+A <- samples %>%
+  filter(seedtreatment == "NTC" & year == "2015") %>%
+  select(locationXyear, variety, plantdensity, mgperroot) %>%
+  ggplot(aes(x = variety, y = plantdensity)) + 
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(~locationXyear, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 3, method = "anova") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("Plant Density (plants/m2)")
+  
+B <- samples %>%
+  filter(seedtreatment == "NTC" & year == "2015") %>%
+  select(locationXyear, variety, plantdensity, mgperroot) %>%
+  ggplot(aes(x = variety, y = mgperroot)) + 
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(~locationXyear, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 3, method = "anova") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("Root Biomass (mg/root)")
+
+C <- samples %>%
+  filter(seedtreatment == "NTC" & year == "2016") %>%
+  select(locationXyear, variety, plantdensity, mgperroot) %>%
+  ggplot(aes(x = variety, y = plantdensity)) + 
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(~locationXyear, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 3, method = "anova") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("Plant Density (plants/m2)")
+  
+D <- samples %>%
+  filter(seedtreatment == "NTC" & year == "2016") %>%
+  select(locationXyear, variety, plantdensity, mgperroot) %>%
+  ggplot(aes(x = variety, y = mgperroot)) + 
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(~locationXyear, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 3, method = "anova") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("Root Biomass (mg/root)")
+
+E <- samples %>%
+  filter(seedtreatment == "NTC" & year == "2015") %>%
+  select(locationXyear, variety, plantdensity, mgperroot, kg_ha) %>%
+  ggplot(aes(x = variety, y = kg_ha)) + 
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(~locationXyear, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 3, method = "anova") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("Kg/ha")
+  
+F.1 <- samples %>%
+  filter(seedtreatment == "NTC" & year == "2016") %>%
+  select(locationXyear, variety, plantdensity, kg_ha) %>%
+  ggplot(aes(x = variety, y = kg_ha)) + 
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(~locationXyear, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 3, method = "anova") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("Kg/ha")
+
+plot_grid(A, B, C, D, E, F.1, labels = "AUTO")
+```
+
+```{r Plots:Seedtreatments}
+samples$seedtreatment <- factor(samples$seedtreatment, levels = c("NTC", "F", "FI", "FIN"))
+
+A <-samples %>%
+    select(locationXcompany, locationXyear, location, company, plantdensity, mgperroot, year, seedtreatment, variety) %>%
+    ggplot(aes(x = seedtreatment, y = plantdensity)) + 
+    geom_boxplot(alpha = 0.3) +
+    facet_grid(variety~locationXyear, scales = "free", space = "free_x", drop = TRUE) +
+    stat_compare_means(method = "anova")  + 
+    geom_jitter(alpha = 0.3) + 
+    theme_bw() +
+    my.theme + 
+    xlab("") + 
+    ylab("Plant Density (plants/m2)")
+
+B <-samples %>%
+    select(locationXcompany, locationXyear, location, company, plantdensity, mgperroot, year, seedtreatment, variety) %>%
+    ggplot(aes(x = seedtreatment, y = mgperroot)) + 
+    geom_boxplot(alpha = 0.3) +
+    facet_grid(variety~locationXyear, scales = "free", space = "free_x", drop = TRUE) +
+    stat_compare_means(method = "anova")  + 
+    geom_jitter(alpha = 0.3) + 
+    theme_bw() +
+    my.theme + 
+    xlab("") + 
+    ylab("Root Biomass (mg/root)")
+
+C <- samples %>%
+    select(locationXcompany, locationXyear, location, company, plantdensity, mgperroot, year, seedtreatment, variety, kg_ha) %>%
+    ggplot(aes(x = seedtreatment, y = kg_ha)) + 
+    geom_boxplot(alpha = 0.3) +
+    facet_grid(variety~locationXyear, scales = "free", space = "free_x", drop = TRUE) +
+    stat_compare_means(method = "anova")  + 
+    geom_jitter(alpha = 0.3) + 
+    theme_bw() +
+    my.theme + 
+    xlab("") + 
+    ylab("Kg/hectare")
+```
+
+##Remove samples that were messed up durring handeling 
+Remove samples I know are wrong, mistakes in processing or I knew I mixed them up
+For example Allegan 2015 P:10 R:35 and Ingham 2015 P:21 R:43 because I knew I mixed them up, or they were questionable during processing
+Also I know I accidently cross contaminated the NTC in plate 3 during a PCR step. Whoops. So it doesnt make sense to include these in the analysis. 
+```{r Sample removal}
+myphy.2 <- myphy %>%
+  subset_samples(SampleID != "Allegan20151035") %>%
+  subset_samples(SampleID != "Ingham20152143") %>%
+  subset_samples(SampleID != "Ingham20161149") %>%
+  subset_samples(SampleID != "Ingham2016148") %>%
+  subset_samples(SampleID != "Allegan2015931") %>%
+  subset_samples(SampleID != "Allegan2016224") %>%
+  subset_samples(SampleID != "Ingham2015NANA") %>%
+   subset_samples(SampleID != "NTCNTCNTCNTCbc576")
+```
+
+##Decontam
+-decontaminate the samples based on prevelence in NTC 
+-Cannot do the decontamination based on the DNA concentration because I didn't actually quantify the samples
+```{r identify putative contaminants}
+myphy.2@sam_data$Sample_or_Control <- ifelse(myphy.2@sam_data$location == "NTC", "Control Sample", "True Sample")
+
+sample_data(myphy.2)$is.neg <- sample_data(myphy.2)$Sample_or_Control == "Control Sample"
+contamdf.prev <- isContaminant(myphy.2, method="prevalence", neg="is.neg", threshold = 0.5, normalize = TRUE)
+
+badTaxa <- rownames(contamdf.prev[contamdf.prev$contaminant == TRUE,])
+print(badTaxa)
+```
+
+```{r remove contaminants}
+goodTaxa <- setdiff(taxa_names(myphy.2), badTaxa)
+myphy.3 <- prune_taxa(goodTaxa, myphy.2)
+```
+
+##Low reads samples
+Lets look at the otu table to see if particular samples did not sequence well 
+```{r Sequence reads}
+sample.reads <- data.frame(colSums(myphy.3@otu_table)); colnames(sample.reads) <- "num_reads"
+sample.reads$samples <- rownames(sample.reads)
+print(sample.reads)
+```
+There were plenty that did not sequence well... 
+
+We will cut out any sample with less than 1000 reads per sample. 
+```{r identify high read samples}
+high.reads <- sample.reads$samples[sample.reads$num_reads >= 1000] #define high read samples at 1000... not really great because the sequencing run wasn't fantastic 
+myphy.4 <- myphy.3 %>% subset_samples(SampleID %in% high.reads) # take out those samples
+```
+
+Total number of reads analysed
+```{r}
+sum(taxa_sums(myphy.4))
+```
+
+##Remove samples we dont want to analyse. (i.e. Not rhizosphere): Did we sample enough to capture all oomycete samples
+```{r}
+myphy_rhizosphere <- myphy.4 %>%
+  subset_samples(seedtreatment != "None") %>%
+  subset_samples(seedtreatment != "NA") %>% 
+  subset_samples(location != "Mock") %>% 
+  subset_samples(location != "NTC") %>%
+  subset_samples(sample_type != "Bulk")
+
+myphy_oomy_rhizosphere <- subset_taxa(myphy_rhizosphere, Phylum=="Oomycota") # This is input into network analysis below
+samp.data <- data.frame(myphy_oomy_rhizosphere@sam_data)
+myphy_oomy.vegan <- t(myphy_oomy_rhizosphere@otu_table)
+
+S <- specnumber(myphy_oomy.vegan) # observed number of species
+raremax <- min(rowSums(myphy_oomy.vegan))
+Srare <- rarefy(myphy_oomy.vegan, raremax)
+oom.rarecurve <- rarecurve(myphy_oomy.vegan, step = 20, sample = raremax, col = "blue", cex = 0.6)
+
+oom.rare.curve.extract <- NULL
+for(i in 1:length(oom.rarecurve)){
+  sample.200 <- data.frame(rare.spec = oom.rarecurve[[i]])
+sample.200$read_depth <- attr(oom.rarecurve[[i]], "Subsample")
+sample.200$sample <- rownames(myphy_oomy.vegan[i,])
+oom.rare.curve.extract <- rbind.data.frame(oom.rare.curve.extract, sample.200)
+}
+
+oom.rare.curve.extract$location <- samp.data$location[match(oom.rare.curve.extract$sample, samp.data$SampleID)]
+oom.rare.curve.extract$year <- samp.data$year[match(oom.rare.curve.extract$sample, samp.data$SampleID)]
+oom.rare.curve.extract$locationXyear <- interaction(oom.rare.curve.extract$location, oom.rare.curve.extract$year)
+
+oom.rare <- data.frame(spec.observed = S, spec.rare = Srare)
+oom.rare$sample <- rownames(oom.rare)
+
+oom.rare$diff <- oom.rare$spec.observed - oom.rare$spec.rare
+
+oom.rare$location <- samp.data$location[match(oom.rare$sample, samp.data$SampleID)]
+oom.rare$year <- samp.data$year[match(oom.rare$sample, samp.data$SampleID)]
+oom.rare$locationXyear <- interaction(oom.rare$location, oom.rare$year)
+
+A <- ggplot(oom.rare.curve.extract, aes(x = read_depth, y = rare.spec, group = sample)) + 
+  #geom_point() +
+  geom_line(color = "grey35") + 
+  xlab("Reads") + 
+  ylab("Number of OTUs") + 
+  theme_classic() + 
+  geom_vline(xintercept = raremax, linetype = "dashed") +
+  facet_wrap(~locationXyear) +
+  theme(legend.position="none")
+
+
+B <- ggplot() + 
+  geom_point(data = oom.rare, aes(x = spec.observed, y = spec.rare, fill = locationXyear), color = "black", shape = 21, alpha = 0.6) +
+  theme_classic() + 
+  scale_fill_npg() +
+  xlab("Observed number of OTUs") + 
+  ylab("Rarefied number of OTUs") + 
+  geom_abline() + 
+  geom_smooth(data = oom.rare, aes(x = spec.observed, y = spec.rare, color = locationXyear), method = lm, se = FALSE) +
+  theme(legend.position="none")
+
+df1 <- oom.rare %>%
+  select(spec.observed, locationXyear)
+df2 <- oom.rare %>%
+  select(spec.rare, locationXyear)
+df1$value <- "Observed"
+df2$value <- "Rarefy"
+colnames(df1) <- c("number", "locationXyear", "value")
+colnames(df2) <- c("number", "locationXyear", "value")
+df.final <- rbind.data.frame(df1, df2)
+
+C <- ggplot(data = df.final, aes(x = value, y = number)) + 
+  geom_boxplot(fill = "grey") +
+  geom_jitter(alpha = 0.6) +
+  facet_wrap(~locationXyear) + 
+  xlab("") + 
+  ylab("Number of OTUs") +
+  stat_compare_means(method = "t.test") +
+  theme(legend.position="none")
+
+D <- ggplot(data = oom.rare, aes(x = locationXyear, y = diff)) + 
+  geom_boxplot() +
+  geom_jitter() +
+  stat_compare_means()
+  
+plot_grid(A, B, C, D, labels = "AUTO", ncol = 1)
+```
+
+##Rarefy to even depth 
+```{r rarefy for diversity metrics}
+myphy_f_rare <- rarefy_even_depth(myphy.4, sample.size = min(sample_sums(myphy.4)), rngseed=1) #record seed and # of OTUs removed
+#seed = 1
+#OTUs removed = 39
+```
+
+Hmmm well probably not... we certainly were undersampling toward the upper range of observed species. which means we are loosing some information by rarefying, but what else to do? Resequencing this project is not going to help the results. To be conservative we should refraine from claiming anything based on more rare taxa. 
+
+##Mock Community
+```{r subset mock}
+myphy_mock <- subset_samples(myphy_f_rare, location == "Mock")
+```
+
+```{r}
+myphy.relative <- myphy_mock %>%   
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  arrange(OTU)    # Sort data frame alphabetically by OTU
+mean.rel.abund <- myphy.relative %>% 
+  group_by(OTU, Kingdom, Phylum, Class, Order, Family, Genus, Species) %>%
+  nest() %>%
+  mutate(mean.relabund = purrr::map(data,~mean(.$Abundance*100))) %>%
+  mutate(SE.relabund = purrr::map(data,~sd(.$Abundance*100)/sqrt(length(.$Abundance*100)))) %>%
+  unnest(mean.relabund, SE.relabund) %>%
+  select(OTU, Kingdom, Phylum, Class, Order, Family, Genus, Species,  mean.relabund, SE.relabund) %>%
+  arrange(-mean.relabund) 
+
+ggplot(mean.rel.abund[mean.rel.abund$mean.relabund > 0.5,], aes(x = reorder(Species, -mean.relabund), y = mean.relabund)) + 
+  geom_bar(position = position_dodge(), stat="identity") + 
+  my.theme + 
+  scale_fill_npg() + 
+  xlab("") + 
+  ylab("Mean relative abundance") +
+  theme(legend.position=c(0.8, 0.8), 
+        legend.title = element_blank(), 
+        axis.text.x = element_text(size = 10, face = "bold", family = "serif"),
+        axis.title.y = element_text(size = 15, face = "bold", family = "serif"))
+```
+Well the mock is interesting because the only one not supposed to be there was the lagenidium... so perhaps there was a little cross contamination going on. 
+But there were very little reads identified as fungal. 
+
+```{r mock composition}
+top.mock = data.frame(sort(tapply(taxa_sums(myphy_mock), tax_table(myphy_mock)[, "Genus"], sum), TRUE)); colnames(top.mock) <- "Reads"
+top.mock$Composition <- round(100*top.mock$Reads/sum(top.mock$Reads), 1)
+print(top.mock)
+```
+At a genus level 71 % of the mock community was identified as pythium... 60 % of the species included in the mock were Pythium... 
+so i guess thats good...but there were also fungal reads in there... so....
+
+##Community composition
+```{r percent Kingdom}
+top.kingdom = data.frame(sort(tapply(taxa_sums(myphy_rhizosphere), tax_table(myphy_rhizosphere)[, "Kingdom"], sum), TRUE)); colnames(top.kingdom) <- "Reads"
+top.kingdom$Composition <- round(100*top.kingdom$Reads/sum(top.kingdom$Reads), 1)
+print(top.kingdom)
+taxtable <- data.frame(tax_table(myphy_rhizosphere))
+length(taxtable$Kingdom[taxtable$Kingdom == "Stramenopila"]) #number of stramenopila OTUs
+```
+
+```{r Oomycete OTUs}
+length(taxtable$Kingdom[taxtable$Phylum == "Oomycota"]) #number of Oomycota OTUs
+```
+
+##Additional taxonomic information 
+```{r Addiontal taxonomy for oomycete}
+aditional_taxonomy <- read.csv("../../input_files/Oomycetes_2017_OTUs_BLAST_taxonomy2.csv")
+colnames(aditional_taxonomy) <- c("OTU_add", "Accession", "PercentID", "Evalue", "Bitscore", "BLAST.Taxonomy", "CONSTAX.Taxonomy", "Clade", "Label", "Notes")
+
+taxonomy_table_enhanced <- data.frame(myphy_oomy_rhizosphere@tax_table[order(match(rownames(myphy_oomy_rhizosphere@tax_table), aditional_taxonomy$OTU)),])
+taxonomy_table_enhanced$Clade <- aditional_taxonomy$Clade
+taxonomy_table_enhanced$Label <- aditional_taxonomy$Label
+taxonomy_table_enhanced$Notes <- aditional_taxonomy$Notes
+
+OTU <- myphy_oomy_rhizosphere@otu_table
+SAMP <- myphy_oomy_rhizosphere@sam_data
+TAX <- phyloseq::tax_table(as.matrix(taxonomy_table_enhanced))
+```
+
+##New Phyloseq object with only oomycetes and the samples we want to analyse
+```{r}
+myphy_rizosphere_oom <- phyloseq::phyloseq(OTU, TAX, SAMP)
+```
+
+```{r}
+# for simplicity rename myphy_rhizosphere_oom myphy_f_rare... everything now is done with this phyloseq object
+myphy_f_rare <- myphy_rizosphere_oom
+```
+
+##Average reads per sample now 
+```{r reads per sample}
+summary(sample_sums(myphy_f_rare)) 
+```
+mean number of reads per sample was 6293
+
+```{r plot: reads per sample}
+ggplot(data.frame(sample_sums(myphy_f_rare)), aes(sample_sums.myphy_f_rare.)) + 
+  geom_histogram() + 
+  geom_vline(xintercept = summary(sample_sums(myphy_f_rare))[[1]]) + 
+  geom_vline(xintercept = summary(sample_sums(myphy_f_rare))[[4]]) + 
+  geom_vline(xintercept = summary(sample_sums(myphy_f_rare))[[6]]) + 
+  my.theme2
+```
+
+##Percent composition
+```{r percent composition overall}
+top.Phylum = data.frame(sort(tapply(taxa_sums(myphy_f_rare), tax_table(myphy_f_rare)[, "Phylum"], sum), TRUE)); colnames(top.Phylum) <- "Reads"
+top.Phylum$Composition <- round(100*top.Phylum$Reads/sum(top.Phylum$Reads), 1)
+print(top.Phylum) # should be all 100 % oomycota
+
+top.Class = data.frame(sort(tapply(taxa_sums(myphy_f_rare), tax_table(myphy_f_rare)[, "Class"], sum), TRUE)); colnames(top.Class) <- "Reads"
+top.Class$Composition <- round(100*top.Class$Reads/sum(top.Class$Reads), 1)
+print(top.Class)
+
+top.order = data.frame(sort(tapply(taxa_sums(myphy_f_rare), tax_table(myphy_f_rare)[, "Order"], sum), TRUE)); colnames(top.order) <- "Reads"
+top.order$Composition <- round(100*top.order$Reads/sum(top.order$Reads), 1)
+print(top.order)
+
+top.Family = data.frame(sort(tapply(taxa_sums(myphy_f_rare), tax_table(myphy_f_rare)[, "Family"], sum), TRUE)); colnames(top.Family) <- "Reads"
+top.Family$Composition <- round(100*top.Family$Reads/sum(top.Family$Reads), 1)
+print(top.Family)
+
+top.Genus = data.frame(sort(tapply(taxa_sums(myphy_f_rare), tax_table(myphy_f_rare)[, "Genus"], sum), TRUE)); colnames(top.Genus) <- "Reads"
+top.Genus$Composition <- round(100*top.Genus$Reads/sum(top.Genus$Reads), 1)
+print(top.Genus)
+sum(top.Genus$Composition[4:12])
+
+top.Clade = data.frame(sort(tapply(taxa_sums(myphy_f_rare), tax_table(myphy_f_rare)[, "Clade"], sum), TRUE)); colnames(top.Clade) <- "Reads"
+top.Clade$Composition <- round(100*top.Clade$Reads/sum(top.Clade$Reads), 1)
+print(top.Clade)
+
+top.Label = data.frame(sort(tapply(taxa_sums(myphy_f_rare), tax_table(myphy_f_rare)[, "Label"], sum), TRUE)); colnames(top.Label) <- "Reads"
+top.Label$Composition <- round(100*top.Label$Reads/sum(top.Label$Reads), 1)
+print(top.Label)
+```
+
+###Figure 2
+
+Figure 2A
+```{r plot: genus composition}
+myphy.Genus <- myphy_f_rare %>%
+  tax_glom(taxrank = "Genus") %>%                     # agglomerate at genus level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  arrange(Genus)    # Sort data frame alphabetically by phylum
+
+# Plot 
+mypal = pal_npg("nrc", alpha = 0.7)(10)
+mypal.plus <- c(mypal, "lightskyblue4", "#b15928", "lightgreen", "grey", "purple4")
+mypal2 <- c("#a6cee3","#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928", "grey", "lightskyblue4", "#fb8072")
+
+A <- ggplot(myphy.Genus, aes(x = Sample, y = 100*Abundance, fill = Genus)) + 
+  facet_wrap(~interaction(location,year), nrow = 1, scales = "free_x", strip.position="bottom") +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  ylab("Relative Abundance") +
+  scale_fill_manual(values = mypal.plus) +
+  theme(axis.text.x = element_blank(),
+          axis.text.y = element_text(size = 20, face = "bold", family = "serif"),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 20, face = "bold", family = "serif"),
+          axis.line.x = element_blank(),
+          axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'),
+          legend.text = element_text(size = 10, face = "bold", family = "serif"),
+          legend.key = element_blank(),
+          legend.title = element_text(size = 10, face="bold", family = "serif"),
+          legend.position = "right", 
+          strip.text.x = element_text(size = 10, face = "bold", family = "serif", vjust=2),
+          panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+```
+
+This is interesting but not going to include it manuscript
+```{r Function RE}
+myphy_f_rare@sam_data$locationXyear <- interaction(myphy_f_rare@sam_data$location, myphy_f_rare@sam_data$year)
+
+function.graph <- myphy_f_rare %>%
+  merge_samples("locationXyear") %>%
+  tax_glom(taxrank = "Notes") %>%                     # agglomerate at genus level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                        # Melt to long format
+  group_by(Sample, Notes) %>%
+  nest() %>%
+  mutate(composition = purrr::map(data,~sum(.$Abundance*100))) %>%
+  unnest(composition) %>%
+  arrange(Notes)
+
+D <- ggplot(function.graph, aes(x = Sample, y = composition, fill = Notes)) + 
+  geom_bar(stat = "identity", color = "black") +
+  theme_minimal() +
+  ylab("Relative Abundance") +
+  scale_fill_manual(values = mypal.plus) +
+  theme(axis.text.y = element_text(size = 15, face = "bold", family = "serif"),
+        axis.text.x = element_text(size = 13, face = "bold", family = "serif"),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 20, face = "bold", family = "serif"),
+          axis.line.x = element_blank(),
+          axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'),
+          legend.text = element_text(size = 10, face = "bold", family = "serif"),
+          legend.key = element_blank(),
+          legend.title = element_blank(),
+          legend.position = "right", 
+          panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+```
+
+Figure 2B
+```{r}
+Clade.composition <- myphy_f_rare %>%
+  merge_samples("locationXyear") %>%
+  subset_taxa(., Genus %in% c("Phytophthora","Pythium", "Phytopythium")) %>%
+  tax_glom(taxrank = "Clade") %>%                     # agglomerate at genus level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                        # Melt to long format
+  group_by(Sample, Clade) %>%
+  nest() %>%
+  mutate(composition = purrr::map(data,~sum(.$Abundance*100))) %>%
+  unnest(composition) %>%
+  arrange(-composition)
+
+myphy.Clade <- myphy_f_rare %>%
+  subset_taxa(., Genus %in% c("Phytophthora","Pythium", "Phytopythium")) %>%
+  tax_glom(taxrank = "Clade") %>%                     # agglomerate at genus level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  arrange(Clade)    # Sort data frame alphabetically by phylum
+
+B <- ggplot(myphy.Clade, aes(x = reorder(Sample, -Abundance), y = 100*Abundance, fill = Clade)) + 
+  facet_wrap(~interaction(location,year), nrow = 1, scales = "free_x", strip.position="bottom") +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  ylab("Relative Abundance") +
+  scale_fill_manual(values = mypal2) +
+  theme(axis.text.x = element_blank(),
+          axis.text.y = element_text(size = 20, face = "bold", family = "serif"),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 20, face = "bold", family = "serif"),
+          axis.line.x = element_blank(),
+          axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'),
+          legend.text = element_text(size = 10, face = "bold", family = "serif"),
+          legend.key = element_blank(),
+          legend.title = element_text(size = 10, face="bold", family = "serif"),
+          legend.position = "right", 
+          strip.text.x = element_text(size = 10, face = "bold", family = "serif", vjust=2),
+          panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+```
+
+Figure 2C
+```{r OTU Composition each site}
+# getting the mean relative abundance of each OTU
+myphy.relative <- myphy_f_rare %>%   
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  arrange(OTU)    # Sort data frame alphabetically by OTU
+mean.rel.abund <- myphy.relative %>% 
+  group_by(OTU, Kingdom, Phylum, Class, Order, Family, Genus, Clade, Label, Notes,  location, year) %>%
+  nest() %>%
+  mutate(mean.relabund = purrr::map(data,~mean(.$Abundance*100))) %>%
+  mutate(SE.relabund = purrr::map(data,~sd(.$Abundance*100)/sqrt(length(.$Abundance*100)))) %>%
+  unnest(mean.relabund, SE.relabund) %>%
+  select(OTU, Kingdom, Phylum, Class, Order, Family, Genus, Clade, Label, Notes, location, year,  mean.relabund, SE.relabund) %>%
+  arrange(-mean.relabund) 
+decide <- mean.rel.abund %>%
+  group_by(OTU) %>%
+  nest() %>%
+  mutate(yes.no = purrr::map(data,~ifelse(.$mean.relabund > 2, "Keep", "Discard"))) %>% # if one site has at least > 0.25% keep it
+  mutate(keep.discard = purrr::map(yes.no,~any(. == "Keep"))) %>%
+  unnest(keep.discard) %>%
+  select(OTU, keep.discard)
+decide$OTU[decide$keep.discard == "TRUE"]
+OTU.keep <- decide$OTU[decide$keep.discard == TRUE]
+
+filter.1.percent <- mean.rel.abund[mean.rel.abund$OTU %in% OTU.keep,]
+filter.1.percent$label <- paste(filter.1.percent$OTU, filter.1.percent$Label)
+
+filter.1.percent[filter.1.percent$OTU == "OTU43",]
+#write.csv(filter.1.percent, "TopOTUs.csv")
+
+#plot of the mean relative abundnace of OTUs with at least mean relative abudnance > 2 % at any site. 
+C <- ggplot(filter.1.percent, aes(x = reorder(Label, -mean.relabund), y = mean.relabund, fill = interaction(location, year))) + 
+  geom_bar(position = position_dodge(), stat="identity") + 
+  geom_errorbar(aes(ymin = mean.relabund - SE.relabund, ymax = mean.relabund + SE.relabund),width = 0.2,position = position_dodge(0.9)) + 
+  my.theme + 
+  scale_fill_npg() + 
+  xlab("") + 
+  ylab("Mean relative abundance") +
+  theme(legend.position=c(0.8, 0.8), 
+        legend.title = element_blank(), 
+        axis.text.x = element_text(size = 10, face = "bold", family = "serif"),
+        axis.title.y = element_text(size = 15, face = "bold", family = "serif"))
+```
+
+```{r Figure 2}
+bottom <- plot_grid(C, align = 'h', axis = 'l', nrow = 1, scale = 0.9, labels = "C")
+# then build the bottom row
+top_row <- plot_grid(A, B, labels = c("A", "B"), rel_widths = c(1, 1))
+# then combine with the top row for final plot
+plot_grid(top_row, bottom, ncol = 1, rel_heights = c(1, 1), rel_widths = c(1,1))
+```
+
+##Alpha diversity metrics using all oomycete OTUs 
+
+Have to rarefy to min sample depth for alpha analysis
+```{r}
+myphy_f_rare <- rarefy_even_depth(myphy_f_rare, sample.size = min(sample_sums(myphy_f_rare)), rngseed=1) #record seed and # of OTUs removed
+#seed = 1
+#OTUs removed = 39
+```
+
+###Linear models
+```{r calculate alpha diversity metrics}
+samples <- data.frame(sample_data(myphy_f_rare))
+samples$shannon <- vegan::diversity(t(myphy_f_rare@otu_table), index = "shannon")
+samples$simpson <- vegan::diversity(t(myphy_f_rare@otu_table), index = "simpson")
+samples$richness <- vegan::specnumber(t(myphy_f_rare@otu_table))
+samples$plieou <- samples$shannon/log(samples$richness)
+samples$invsimpson <- vegan::diversity(t(myphy_f_rare@otu_table), index = "invsimpson")
+samples <- cbind.data.frame(estimate_richness(myphy_f_rare, measures=c("Chao1"))[1], samples)
+samples$insecticide <- ifelse(samples$seedtreatment %in% c("FI", "FIN"), "Insecticide", "No Insecticide")
+```
+
+```{r Defining interactions}
+samples$locationXyearXcompany <- interaction(samples$company, samples$location, samples$year)
+samples$locationXcompany <- interaction(samples$location, samples$company)
+samples$locationXyearXvariety <- interaction(samples$variety, samples$location, samples$year)
+samples$locationXyear <- interaction(samples$location, samples$year)
+```
+
+```{r Shannon:locationXyear}
+lm.shannon.locationXyear <- lmer(invsimpson~ seedtreatment*variety*location*year + (1|rep), data = samples)
+car::Anova(lm.shannon.locationXyear)
+```
+Shannon diversity was not different due to any factor
+
+```{r Richness:locationXyear}
+lm.richness.locationXyear <- lmer(richness ~ seedtreatment*variety*location*year + (1|rep), data = samples)
+car::Anova(lm.richness.locationXyear)
+lsmeans.richness.locationXyear <- emmeans(lm.richness.locationXyear, ~location|year)
+Results_lsmeansEC <- cld(lsmeans.richness.locationXyear, alpha = 0.05, adjust = "tuk", Letters = letters, reversed = TRUE, details = TRUE)
+Results_lsmeansEC
+```
+Richness was different due to location year interaction
+
+```{r Evenness:locationXyear}
+lm.plieou.locationXyear <- lmer(plieou ~ seedtreatment*variety*location*year + (1|rep), data = samples)
+car::Anova(lm.plieou.locationXyear)
+lsmeans.plieou.locationXyear <- emmeans(lm.plieou.locationXyear, ~location|year)
+Results_lsmeansEC <- cld(lsmeans.plieou.locationXyear , alpha = 0.05, adjust = "tuk", Letters = letters, reversed = TRUE, details = TRUE)
+Results_lsmeansEC
+```
+Evenness was different due to location year interaction
+
+###Figure 3.
+```{r Figure 3. Plots: locationXyear alpha}
+samples$seedtreatment <- factor(samples$seedtreatment, levels = c("NTC", "F", "FI", "FIN"))
+
+A <- samples %>%
+  select(location, year, seedtreatment, variety, locationXyear, shannon) %>%
+  ggplot(aes(x = location, y = shannon)) + 
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(~year, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 3, label.x = 1.5,method = "t.test") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("H'")
+  
+B <- samples %>%
+  select(location, year, seedtreatment, variety, locationXyear, richness) %>%
+  ggplot(aes(x = location, y = richness)) + 
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(~year, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 35, label.x = 1.5,method = "t.test") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("S")
+
+C <- samples %>%
+  select(location, year, seedtreatment, variety, locationXyear, plieou) %>%
+  ggplot(aes(x = location, y = plieou)) + 
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(~year, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 1, method = "t.test") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("J")
+
+D <- samples %>%
+  select(location, year, seedtreatment, variety, locationXyear, plieou, Chao1) %>%
+  ggplot(aes(x = location, y = Chao1)) + 
+  geom_boxplot(alpha = 0.3) +
+  facet_grid(~year, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 1, method = "t.test") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("Chao1")
+
+plot_grid(A, B, C, labels = "AUTO", ncol = 1)
+```
+
+Investigating the effect of an insecticide on oomycete alpha diversity
+```{r}
+A <- samples %>%
+  select(location, year, seedtreatment, variety, locationXyear, shannon, richness, plieou,  insecticide) %>%
+  ggplot(aes(x = location, y = shannon, fill = seedtreatment)) + 
+  geom_boxplot(alpha = 0.3) +
+  scale_fill_npg() +
+  facet_grid(~year, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 3, label.x = 1.5,method = "anova") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("H'")
+
+B <- samples %>%
+  select(location, year, seedtreatment, variety, locationXyear, shannon, richness, plieou,  insecticide) %>%
+  ggplot(aes(x = location, y = richness, fill = seedtreatment)) + 
+  geom_boxplot(alpha = 0.3) +
+  scale_fill_npg() +
+  facet_grid(~year, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 35, label.x = 1.5,method = "anova") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("S")
+
+C <- samples %>%
+  select(location, year, seedtreatment, variety, locationXyear, shannon, richness, plieou,  insecticide) %>%
+  ggplot(aes(x = location, y = plieou, fill = seedtreatment)) + 
+  geom_boxplot(alpha = 0.3) +
+  scale_fill_npg() +
+  facet_grid(~year, scales = "free", space = "free_x", drop = TRUE) +
+  stat_compare_means(label.y = 1, label.x = 1.5,method = "anova") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  my.theme + 
+  xlab("") + 
+  ylab("J")
+
+plot_grid(A, B, C, labels = "AUTO", ncol = 1)
+
+lm.richness.insecticide <- lmer(richness ~ location*year*insecticide + (1|rep), data = samples)
+car::Anova(lm.richness.insecticide)
+lsmeans.richness.insecticide <- emmeans(lm.richness.insecticide, ~insecticide|year|location)
+Results_lsmeansEC <- cld(lsmeans.richness.insecticide , alpha = 0.05, adjust = "tuk", Letters = letters, reversed = TRUE, details = TRUE)
+Results_lsmeansEC
+
+lm.shannon.insecticide <- lmer(shannon ~ location*year*insecticide + (1|rep), data = samples)
+car::Anova(lm.shannon.insecticide)
+lsmeans.shannon.insecticide <- emmeans(lm.shannon.insecticide, ~insecticide|year|location)
+Results_lsmeansEC <- cld(lsmeans.shannon.insecticide , alpha = 0.05, adjust = "tuk", Letters = letters, reversed = TRUE, details = TRUE)
+Results_lsmeansEC
+
+lm.plieou.insecticide <- lmer(plieou ~ location*year*insecticide + (1|rep), data = samples)
+car::Anova(lm.plieou.insecticide)
+lsmeans.plieou.insecticide <- emmeans(lm.plieou.insecticide, ~insecticide|year|location)
+Results_lsmeansEC <- cld(lsmeans.plieou.insecticide , alpha = 0.05, adjust = "tuk", Letters = letters, reversed = TRUE, details = TRUE)
+Results_lsmeansEC
+```
+
+###Alpha diversity and continuous variables:
+-mg per root
+-plant density
+-bu_acre
+####Shannon diversity with either root mass or plant density 
+```{r Plot}
+A <- ggscatter(samples, x = "mgperroot", y = "shannon",
+          add = "reg.line", conf.int = TRUE,    
+          add.params = list(fill = "lightgray"),
+          ggtheme = theme_minimal()
+          )+
+  stat_cor(method = "spearman") + 
+  facet_wrap(~location*year*variety)
+```
+Shannon diversity did not correlate with root biomass in any location-year-variety combination
+
+```{r}
+B <- ggscatter(samples, x = "plantdensity", y = "shannon",
+          add = "reg.line", conf.int = TRUE,    
+          add.params = list(fill = "lightgray"),
+          ggtheme = theme_minimal()
+          )+
+  stat_cor(method = "spearman") + 
+  facet_wrap(~location*year*variety)
+```
+Shannon diversity was negatively correlated with plant density in Allegan 2016 in variety AG2433
+
+####Richness with either root mass or plant density 
+```{r}
+C <- ggscatter(samples, x = "mgperroot", y = "richness",
+          add = "reg.line", conf.int = TRUE,    
+          add.params = list(fill = "lightgray"),
+          ggtheme = theme_minimal()
+          )+
+  stat_cor(method = "spearman") + 
+  facet_wrap(~location*year*variety)
+```
+Richness did not correlate with root biomass in any location-year-variety combination
+
+```{r}
+D <- ggscatter(samples, x = "plantdensity", y = "richness",
+          add = "reg.line", conf.int = TRUE,    
+          add.params = list(fill = "lightgray"),
+          ggtheme = theme_minimal()
+          )+
+  stat_cor(method = "spearman") + 
+  facet_wrap(~location*year*variety)
+```
+Richness did not correlate with plant density in any location-year-variety combination
+
+####Evenness with either root mass or plant density 
+```{r}
+E <- ggscatter(samples, x = "mgperroot", y = "plieou",
+          add = "reg.line", conf.int = TRUE,    
+          add.params = list(fill = "lightgray"),
+          ggtheme = theme_minimal()
+          )+
+  stat_cor(method = "spearman") + 
+  facet_wrap(~location*year*variety)
+```
+Evenness was significantly positiitly correelated with rootmass in Ingham 2016 vareity P92Y51
+
+```{r}
+F1 <- ggscatter(samples, x = "plantdensity", y = "plieou",
+          add = "reg.line", conf.int = TRUE,    
+          add.params = list(fill = "lightgray"),
+          ggtheme = theme_minimal()
+          )+
+  stat_cor(method = "spearman") + 
+  facet_wrap(~location*year*variety)
+```
+Evenness did not correlate with plant density in any location-year-variety combination
+
+This analysis was also tested this with just Pythium as well and nothing significant
+
+###Any Clades or OTUs relative abundance and continuous variables
+```{r}
+#relative abundance of each OTU
+myphy.relative <- myphy_f_rare %>%   
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  arrange(OTU)    # Sort data frame alphabetically by OTU
+
+filter.1.percent <- myphy.relative[myphy.relative$OTU %in% OTU.keep,]
+
+filter.1.percent %>%
+  filter(OTU == "OTU4") %>%
+    ggplot(aes(x = seedtreatment, y = Abundance*100)) + 
+    geom_boxplot(alpha = 0.3) +
+    facet_grid(~variety*location*year, scales = "free", space = "free_x", drop = TRUE) +
+    stat_compare_means(method = "anova", label.x = 0.7)  + 
+    geom_jitter(alpha = 0.3) + 
+    theme_bw() +
+    my.theme + 
+    xlab("") +
+    ylab(expression(bold("Mean relative abundance")))
+
+A <- myphy.relative %>%
+  filter(OTU == "OTU7" & location == "Allegan" & year == "2016" & variety == "AG2433") %>%
+  ggplot(aes(x = mgperroot, y = 100*Abundance), alpha = 0.3) +
+  geom_point() + 
+  stat_cor(method = "spearman") + 
+  geom_smooth(method = "lm", color = "black") +
+  ylab("Relative Abundance") + 
+  xlab("Root Biomass") +
+  facet_wrap(~Label)
+
+
+B <- myphy.relative %>%
+  filter(OTU == "OTU3" & location == "Allegan" & year == "2016" & variety == "AG2433") %>%
+  ggplot(aes(x = mgperroot, y = 100*Abundance), alpha = 0.3) +
+  geom_point() + 
+  stat_cor(method = "spearman") + 
+  geom_smooth(method = "lm", color = "black")+
+  ylab("Relative Abundance") + 
+  xlab("Root Biomass") +
+  facet_wrap(~Label)
+
+
+C <- myphy.relative %>%
+  filter(OTU == "OTU1" & location == "Allegan" & year == "2016" & variety == "AG2433") %>%
+  ggplot(aes(x = mgperroot, y = 100*Abundance), alpha = 0.3) +
+  geom_point() + 
+  stat_cor(method = "spearman") + 
+  geom_smooth(method = "lm", color = "black") + 
+  ylab("Relative Abundance") + 
+  xlab("Root Biomass") + 
+  facet_wrap(~Label)
+
+plot_grid(A,B,C,nrow = 3)
+
+```
+No differences in mean relative abundance of OTU1 due to seedtreatment or variety within any location-year combination
+  - OTU1 was significantly positivlty correlated with root mass in allegan 2016 variety AG2433
+  - OTU1 was significanlty positivlty correlated with root mass in allgan 2016
+  - OTU1 was not significanltycorrelated with plant density overall in allgan 2016
+No differences in mean relative abundance of OTU2 due to seedtreatment or variety within any location-year combination
+  - OTU2 was significanlty negativley correlated with root mass in allegan 2016 variety P92Y51
+No differences in mean relative abundance of OTU3 due to seedtreatment or variety within any location-year combination
+  - OTU3 was significanlty negativlty correlated with root mass in allegan 2016 variety AG2433
+No differences in mean relative abundance of OTU7 due to seedtreatment or variety within any location-year combination
+  - OTU7 was significanlty negativlty correlated with root mass in allegan 2016 variety AG2433
+No differences in mean relative abundance of OTU6 due to seedtreatment or variety within any location-year combination
+No differences in mean relative abundance of OTU5 due to seedtreatment or variety within any location-year combination
+No differences in mean relative abundance of OTU4 due to seedtreatment or variety within any location-year combination
+
+##Beta diversity - the composition of a community, meaning difference in taxonomic abundance profiles from different samples
+
+Two beta diversity metrics to use would be bray-curtis distances and jaccard
+-braycurtis distances takes into account abundance or read count data
+-Jaccard distances based on presence absence in a sample
+
+```{r Subset Option}
+# if you want to subset the data before NMDS do this
+#myphy.year <- myphy %>%
+ # subset_samples(year == "2015" & location == "Allegan")
+```
+
+```{r Bray-curtis}
+GPdist.bray = phyloseq::distance(myphy_f_rare, "bray") # create bray-curtis distance matrix
+```
+
+```{r Bray-NMDS Global}
+GP.ord.bray <- ordinate(myphy_f_rare, "NMDS", "bray", trymax = 50, maxit = 100) # NMDS ordination 
+GP.ord.bray$stress
+```
+
+```{r Bray-ADONIS locationXyear}
+adonis2(GPdist.bray~year*location*seedtreatment*variety, as(sample_data(myphy_f_rare), "data.frame")) #Are there significant changes?
+```
+LocationXyear interaction was significant but nothing else globally, meaning that most of the variation in community centroids is coming from site year. 
+Result is the same if using rarefied counts
+
+```{r Bray-dispersions locationXyear}
+beta <- betadisper(GPdist.bray, myphy_f_rare@sam_data$location:myphy_f_rare@sam_data$year)
+permutest(beta)
+anova(beta)
+
+## pairwise p-values
+TukeyHSD(beta)
+```
+
+So there are differences in centroids, but we cannot be completely confident because there is also a violation of multivariate dispersions. This indicates that we sure that within site year there are some communities that are significantly more homogenous than others.Specifically, Ingham 2015 was significanlty more homogenous than all other communities. Allegan 2015 was more homogenous than Allegan 2016. The only comparison that was not significanlty more dispersed than each other were samples collected in 2016. So comparing ingham to allegan in 2016. 
+
+However, by looking at the NMDS plot, I am pretty confident despite the violation of multivariate dispersions there is also a difference in community composition between sites. Also, these results are not dependent on rarefication. 
+
+```{r Bray: plot ordination}
+mypal = pal_npg("nrc", alpha = 0.7)(9)
+global.nmds <- plot_ordination(myphy_f_rare, ordination = GP.ord.bray, type = "samples") 
+global.nmds.data <- global.nmds$data
+
+A <- ggplot(data = global.nmds.data, aes(x = NMDS1, y = NMDS2, fill = location, shape = year), 
+             color = "black") + 
+  geom_point(size = 2, alpha = 0.6) +
+  scale_shape_manual(name = "Year Sampled", values = c(24, 21)) +
+  theme_bw() +
+  stat_ellipse(type = "norm", geom = "polygon", alpha = 0.3) + 
+  scale_fill_manual(name = "Location", values = c(mypal[1], mypal[2])) +
+  annotate("text", x = -0.7, y = -1.2, label = paste("Stress = ", as.character(round(GP.ord.bray$stress, 3)))) +
+  theme_bw() +
+  #geom_text_repel(data = global.nmds.data, aes(x = NMDS1, y = NMDS2, label = SampleID)) + 
+  my.theme3 +
+  labs(list(y = expression(bold("NMDS1" )),               
+       x = expression(bold("NMDS2")))) 
+```
+
+```{r Jaccard-NMDS}
+GPdist.jaccard = phyloseq::distance(myphy_f_rare, "jaccard") # create jaccard distance matrix
+GP.ord.jaccard <- ordinate(myphy_f_rare, "NMDS", "jaccard") # NMDS ordination 
+
+plot_ordination(myphy_f_rare, ordination = GP.ord.jaccard, type = "samples", 
+                color = "location", shape = "year",   title = "Oomycete NMDS (Jaccard dissim.)")+theme_bw() +
+  stat_ellipse(type = "t")
+```
+So no significant changes in multivariate space with using a presence absence metric. So patterns are pretty robust. Just report the Bray-curtis
+
+Indicator species analysis locationXyear interaction
+-contrast effect of location 
+```{r Indicator LocationXYear}
+# getting the mean relative abundance of each OTU
+myphy.relative <- myphy_f_rare %>%   
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  arrange(OTU)    # Sort data frame alphabetically by OTU
+mean.rel.abund <- myphy.relative %>% 
+  group_by(OTU, Label, location, year) %>%
+  nest() %>%
+  mutate(mean.relabund = purrr::map(data,~mean(.$Abundance*100))) %>%
+  mutate(SE.relabund = purrr::map(data,~sd(.$Abundance*100)/sqrt(length(.$Abundance*100)))) %>%
+  unnest(mean.relabund, SE.relabund) %>%
+  select(OTU, Label, location, year,  mean.relabund, SE.relabund) %>%
+  arrange(-mean.relabund) 
+mean.rel.abun.Allegan.2015 <- subset(mean.rel.abund, location == "Allegan" & year == "2015")
+mean.rel.abun.Allegan.2016 <- subset(mean.rel.abund, location == "Allegan" & year == "2016")
+mean.rel.abun.Ingham.2015 <- subset(mean.rel.abund, location == "Ingham" & year == "2015")
+mean.rel.abun.Ingham.2016 <- subset(mean.rel.abund, location == "Ingham" & year == "2016")
+```
+
+```{r IndicatorXLocationYear}
+# Perform indicator species analsysis just considering the four original groups
+indicator.dist <- indicspecies::multipatt(as.data.frame(t(myphy_f_rare@otu_table)), cluster = interaction(myphy_f_rare@sam_data$location, myphy_f_rare@sam_data$year))
+
+# summary of results
+summary(indicator.dist, indvalcomp = TRUE)
+
+# get all data for each OTU
+all.OTUs <- indicator.dist$sign
+all.OTUs$OTUs <- rownames(all.OTUs)
+
+frequency.groups <- data.frame(table(all.OTUs$index))
+frequency.groups$categories <- colnames(indicator.dist$str)
+# how many OTUs were given a category?
+sum(frequency.groups$Freq)
+# looks like all OTUs were given a category
+
+all.OTUs$category <- frequency.groups$categories[match(all.OTUs$index,frequency.groups$Var1)]
+
+all.OTUs <- all.OTUs %>% filter(!is.na(index))
+all.OTUs$pvalue <- ifelse(is.na(all.OTUs$p.value), 1, all.OTUs$p.value)
+Allegan.2015.unique <- all.OTUs[all.OTUs$category == "Allegan.2015" & all.OTUs$p.value < 0.05,]
+Allegan.2016.unique <- all.OTUs[all.OTUs$category == "Allegan.2016" & all.OTUs$p.value < 0.05,]
+Ingham.2015.unique <- all.OTUs[all.OTUs$category == "Ingham.2015" & all.OTUs$p.value < 0.05,]
+Ingham.2016.unique <- all.OTUs[all.OTUs$category == "Ingham.2016" & all.OTUs$p.value < 0.05,]
+common_OTUs <- all.OTUs[all.OTUs$category == "Allegan.2015+Ingham.2015+Allegan.2016+Ingham.2016",]
+
+#set the order of relative abundance to that matching mean.rel.abund
+mean.rel.abun.Allegan.2015 <- mean.rel.abun.Allegan.2015[mean.rel.abun.Allegan.2015$OTU %in% Allegan.2015.unique$OTUs,]
+mean.rel.abun.Allegan.2015 <- mean.rel.abun.Allegan.2015[ order(match(mean.rel.abun.Allegan.2015$OTU, Allegan.2015.unique$OTUs)), ]
+
+# add column of relative abundance to the indicator species analaysis
+mean.rel.abun.Allegan.2015$Stat <- Allegan.2015.unique$stat
+mean.rel.abun.Allegan.2015$pvalue <- Allegan.2015.unique$p.value
+mean.rel.abun.Allegan.2015[5:8] <- round(mean.rel.abun.Allegan.2015[5:8], 3)
+#write.csv(mean.rel.abun.Allegan.2015, "indicator_Allegan2015.csv")
+
+
+write.csv(all.OTUs, "IndicatorSpecies_siteyears.csv")
+```
+
+Make a venn-diagram of the significant OTUs and combinations
+```{r Venn Diagram}
+Allegan.2015 <- all.OTUs[grep("Allegan.2015", all.OTUs$category),] %>%
+  subset(p.value < 0.05 | NA) %>%
+  rbind.data.frame(common_OTUs) %>%
+  select(OTUs) %>%
+  c()%>%
+  .$OTUs
+Allegan.2016 <- all.OTUs[grep("Allegan.2016", all.OTUs$category),] %>%
+  subset(p.value < 0.05) %>%
+  rbind.data.frame(common_OTUs) %>%
+  select(OTUs)%>%
+  c()%>%
+  .$OTUs
+Ingham.2016 <- all.OTUs[grep("Ingham.2016", all.OTUs$category),] %>%
+  subset(p.value < 0.05) %>%
+  rbind.data.frame(common_OTUs) %>%
+  select(OTUs)%>%
+  c()%>%
+  .$OTUs
+Ingham.2015 <- all.OTUs[grep("Ingham.2015", all.OTUs$category),] %>%
+  subset(p.value < 0.05) %>%
+  rbind.data.frame(common_OTUs) %>%
+  select(OTUs)%>%
+  c()%>%
+  .$OTUs
+
+input  <-list(Allegan.2015,Allegan.2016,Ingham.2015,Ingham.2016)
+
+B <- venn(input, 
+     snames = c("Allegan 2015", "Allegan 2016", "Ingham 2015", "Ingham 2016"), ellipse = T, 
+     zcolor = c(mypal[[1]], mypal[[1]], mypal[[2]], mypal[[2]]), cexsn = 1.2, cexil = 2)
+
+par(xpd = NA, # switch off clipping, necessary to always see axis labels
+    bg = "transparent" # switch off background to avoid obscuring adjacent plots
+  ) 
+venn(input, 
+     snames = c("Allegan 2015", "Allegan 2016", "Ingham 2015", "Ingham 2016"), ellipse = T, 
+     zcolor = c(mypal[[1]], mypal[[1]], mypal[[2]], mypal[[2]]), cexsn = 0.8, cexil = 2)
+recordedplot <- recordPlot() # record the previous plot
+```
+
+```{r}
+#install.packages("gridGraphics")
+library(gridGraphics)
+plot_grid(A,recordedplot, labels = c("A", "B"))
+```
+
+
+```{r Beta- Allegan 2015}
+myphy.site.year <- myphy %>%   
+  subset_samples(year == "2016" & location == "Allegan") %>%
+  rarefy_even_depth(sample.size = min(sample_sums(.)), rngseed=1) #record seed and # of OTUs removed
+
+GPdist.bray = phyloseq::distance(myphy.site.year, "bray") # create bray-curtis distance matrix
+GP.ord.bray <- ordinate(myphy.site.year, "NMDS", "bray") # NMDS ordination 
+
+df.nmds.allegan.2015.taxa <- data.frame(scores(GP.ord.bray, display = "species"))
+df.nmds.allegan.2015.taxa$OTU <- rownames(df.nmds.allegan.2015.taxa)
+df.nmds.allegan.2015.sites <- scores(GP.ord.bray, display = "sites")
+df.nmds.allegan.2015.sites <- cbind.data.frame(myphy.site.year@sam_data, df.nmds.allegan.2015.sites)
+
+## Environment fit analysis
+env <- sample_data(myphy.site.year) %>%
+  select(plantdensity, mgperroot, kg_ha) %>%
+  data.frame()
+
+Oom_env <- envfit(GP.ord.bray, env, permutations = 999, na.rm = TRUE)
+vectors <- as.data.frame(scores(Oom_env, display = "vectors"))
+vectors$labels <- c("Plant Density", "Root Biomass", "Yield")
+
+arrowdf <- vectors
+# Define the arrow aesthetic mapping
+arrow_map <- aes(xend = NMDS1, 
+    yend = NMDS2, 
+    x = 0, 
+    y = 0, 
+    shape = NULL, 
+    color = NULL, 
+    label = labels)
+
+label_map <- aes(x = 1.3 * NMDS1, 
+    y = 1.3 * NMDS2, 
+    shape = NULL, 
+    color = NULL, 
+    label = labels)
+
+arrowhead = arrow(length = unit(0.02, "npc"))
+
+ggplot( ) + 
+  my.theme2 +
+  geom_point(data = df.nmds.allegan.2015.sites, aes(x = NMDS1, y = NMDS2, fill = kg_ha, size = mgperroot), color = "black", shape = 21, alpha = 0.6) +
+  scale_size_continuous(range = c(1,15), breaks = c(20, 40, 60, 80, 100), name = "Root Biomass") +
+  scale_fill_gradient(low = mypal[[1]], high = mypal[[2]], "Yield")+
+  #geom_text(data = df.nmds.allegan.2015.taxa, aes(x = NMDS1, y = NMDS2, label = OTU)) +
+  geom_segment(
+    mapping = arrow_map, 
+    size = .5, 
+    data = arrowdf, 
+    color = "gray", 
+    arrow = arrowhead
+  ) + 
+  geom_text(
+    mapping = label_map, 
+    size = 4,  
+    data = arrowdf, 
+    show.legend = FALSE
+  ) 
+
+adonis2(GPdist.bray~seedtreatment,  as(sample_data(myphy.site.year), "data.frame")) #Are there significant changes in the centroid? 
+
+beta.interaction <- betadisper(GPdist.bray, interaction(myphy.site.year@sam_data$seedtreatment, myphy.site.year@sam_data$variety))
+anova(beta.interaction)
+permutest(beta.interaction)
+
+beta.seedtreatment <- betadisper(GPdist.bray, myphy.site.year@sam_data$seedtreatment)
+anova(beta.seedtreatment)
+permutest(beta.seedtreatment)
+TukeyHSD(beta.seedtreatment)
+
+beta.variety <- betadisper(GPdist.bray, myphy.site.year@sam_data$variety)
+anova(beta.variety)
+permutest(beta.variety)
+```
+
+```{r Beta- Ingham 2016}
+myphy.site.year <- myphy %>%   
+  subset_samples(year == "2016" & location == "Allegan") %>%
+  rarefy_even_depth(sample.size = min(sample_sums(.)), rngseed=1) #record seed and # of OTUs removed
+
+GPdist.bray = phyloseq::distance(myphy.site.year, "bray") # create bray-curtis distance matrix
+GP.ord.bray <- ordinate(myphy.site.year, "NMDS", "bray") # NMDS ordination 
+GP.ord.bray$stress
+
+plot_ordination(myphy.site.year, ordination = GP.ord.bray, type = "samples", 
+                color = "seedtreatment")+theme_bw() +
+  #stat_ellipse(type = "t") + 
+  scale_color_npg() +
+  stat_ellipse(type = "t") +
+  annotate("text", x = -0.75, y = 1, label = paste("Stress = ", as.character(round(GP.ord.bray$stress, 3)))) +
+  theme_bw() +
+  xlim(c(-1,1)) +
+  ylim(c(-1,1)) +
+  #geom_text(aes(label = myphy_f_rare@sam_data$SampleID)) + 
+  labs(list(y = expression(bold("NMDS1" )),               
+       x = expression(bold("NMDS2"))))
+
+adonis2(GPdist.bray~seedtreatment,  as(sample_data(myphy.site.year), "data.frame")) #Are there significant changes in the centroid? 
+
+beta.interaction <- betadisper(GPdist.bray, interaction(myphy.site.year@sam_data$seedtreatment, myphy.site.year@sam_data$variety))
+anova(beta.interaction)
+permutest(beta.interaction)
+
+beta.seedtreatment <- betadisper(GPdist.bray, myphy.site.year@sam_data$seedtreatment)
+anova(beta.seedtreatment)
+permutest(beta.seedtreatment)
+TukeyHSD(beta.seedtreatment)
+
+beta.variety <- betadisper(GPdist.bray, myphy.site.year@sam_data$variety)
+anova(beta.variety)
+permutest(beta.variety)
+```
+Maybe FI is slighlty different in composition, but its hard to say...
+
+Plot of beta-dispersions in Ingham 2016
+```{r Ingham 2016}
+beta.disper.plot <- data.frame(beta.seedtreatment$group, beta.seedtreatment$distances); colnames(beta.disper.plot) <- c("seedtreatment", "distance.centroid")
+ggplot(beta.disper.plot, aes(x = seedtreatment, y = distance.centroid)) + 
+  geom_boxplot(alpha = 0.3) +
+  #stat_compare_means(comparisons = my_comparisons, label =  "p.signif", method = "t.test")+ # Add pairwise comparisons p-value
+  stat_compare_means(label.y = 0.8, method = "anova") + 
+  geom_jitter(alpha = 0.3) + 
+  theme_bw() +
+  xlab("Seed treatment") + 
+  ylab("Distance to centroid") +
+  theme(axis.text.x = element_text(size = 15, face = "bold", family = "serif", angle = 45, hjust = 1),
+          axis.text.y = element_text(size = 20, face = "bold", family = "serif"),
+          axis.title.x = element_text(size = 25, face = "bold", family = "serif"),
+          axis.title.y = element_text(size = 25, face = "bold", family = "serif"),
+          axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
+          axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'),
+          legend.text = element_text(size = 10, face = "bold", family = "serif"),
+          legend.key = element_blank(),
+          legend.title = element_text(size = 10, face="bold", family = "serif"),
+          legend.position = "right", 
+          strip.text.x = element_text(size = 25, face = "bold", family = "serif"),
+        strip.text.y = element_text(size = 25, face = "bold", family = "serif"),
+        title = element_text(size = 16, family = "serif"), 
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
+```
+Well, it seems that maybe FI has more homogenous communities than other treatments, however this is not strong since the FIN did not contain this same pattern. 
+
+Still I dont think we can conclude that seed treatment is doing much.
+
+Lets do a constrained analysis to see the variation due to plant health variables collected. 
+```{r Subset Data}
+myphy.site.year <- myphy_f_rare %>% 
+  subset_samples(year == "2015" & location == "Allegan") %>%
+  #subset_samples(SampleID != "Allegan20161029") %>% # only for Allegan 2016, missing data, comment out if other years
+  rarefy_even_depth(sample.size = min(sample_sums(.)), rngseed=1)
+
+OTU.table <- myphy.site.year %>%
+  otu_table() %>%
+  t() %>%
+  as.data.frame()
+
+plant.health <- myphy.site.year %>%
+  sample_data() %>%
+  select(mgperroot, plantdensity, kg_ha, seedtreatment, variety, location, year) %>%
+  data.frame()
+```
+
+Distance based redundancy analsysis
+```{r dbRDA}
+dbRDA=capscale(OTU.table ~ plantdensity+mgperroot+kg_ha, plant.health, na.action = na.omit, distance = "bray", metaMDSdist = T)
+plot(dbRDA, display = c("sp"), scaling = 2)
+dbRDA.inter=capscale(OTU.table ~ 1, plant.health, na.action = na.omit, distance = "bray", metaMDSdist = T) # just the intercept
+
+mod <- ordistep(dbRDA.inter, scope = formula(dbRDA))
+mod
+anova(mod, permutations = 1000)
+anova(mod, by = "term", permutations = 1000)
+
+dbRDA <- mod
+
+constrained.eig <- data.frame(dbRDA$CCA$eig) 
+constrained.eig$percent.fitted <- 100*(constrained.eig$dbRDA.CCA.eig/sum(constrained.eig$dbRDA.CCA.eig))
+
+dbRDA.summary <- summary(dbRDA)
+proportions.total <- data.frame(dbRDA.summary$cont)
+percent.total.CAP1 <- 100*proportions.total$importance.CAP1[2]
+perent.total.CAP2 <- 100*proportions.total$importance.CAP2[2]
+site.scores <- data.frame(dbRDA.summary$sites)
+#species.scores <- data.frame(dbRDA.summary$species)
+species.scores2 <- data.frame(scores(dbRDA, display = "species"))
+species.scores2 <- cbind.data.frame(data.frame(myphy.site.year@tax_table), species.scores2)
+site.scores$mgperroot <- plant.health$mgperroot
+site.scores$plantdensity <- plant.health$plantdensity
+site.scores$yield <- plant.health$yield
+site.scores$seedtreatment <- myphy.site.year@sam_data$seedtreatment
+site.scores$location <- myphy.site.year@sam_data$location
+site.scores$kg_ha <- myphy.site.year@sam_data$kg_ha
+
+
+# Now add the environmental variables as arrows
+arrowmat <- vegan::scores(dbRDA, display = "bp")
+
+# Add labels, make a data.frame
+arrowdf <- data.frame(labels = c("Plant Density", "Root Biomass"), arrowmat)
+
+# Define the arrow aesthetic mapping
+arrow_map <- aes(xend = CAP1, 
+    yend = CAP2, 
+    x = 0, 
+    y = 0, 
+    shape = NULL, 
+    color = NULL, 
+    label = labels)
+
+label_map <- aes(x = 1.3 * CAP1, 
+    y = 1.3 * CAP2, 
+    shape = NULL, 
+    color = NULL, 
+    label = labels)
+
+arrowhead = arrow(length = unit(0.02, "npc"))
+
+
+mypal = pal_npg("nrc", alpha = 0.7)(9)
+
+dbRDA.allegan.2015 <- ggplot( ) + 
+  my.theme2 +
+  geom_point(data = site.scores, aes(x = CAP1, y = CAP2, fill = plantdensity, size = mgperroot), color = "black", shape = 21, alpha = 0.6) +
+  scale_size_continuous(range = c(1,15), breaks = c(20, 40, 60, 80, 100), name = "Root Biomass") +
+  scale_fill_gradient(low = mypal[[1]], high = mypal[[2]], "Plant Density")+
+  #geom_point(data = species.scores2, aes(x = CAP1, y = CAP2, label = Label), color = "black", alpha = 0.6, shape = 22) +
+  #geom_text_repel(data = subset(species.scores2, CAP1 > 0.18 | CAP2 > 0.18), aes(x = CAP1, y = CAP2, label=Label),hjust=0, vjust=0) +
+  #stat_ellipse(type = "t") +
+  geom_segment(
+    mapping = arrow_map, 
+    size = .5, 
+    data = arrowdf, 
+    color = "gray", 
+    arrow = arrowhead
+  ) + 
+  geom_text(
+    mapping = label_map, 
+    size = 4,  
+    data = arrowdf, 
+    show.legend = FALSE
+  ) +
+  xlab("dbRDA1 (54.44 % fitted, 2.12 % total variation)") + 
+  ylab("dbRDA2 (45.56 % fitted, 1.77 % total variation)")
+```
+
+Creating a new variable for setting a cut point of high/low plant density
+```{r}
+myphy.2015.Allegan <- myphy.site.year
+
+# setting the median as cut point for high-low plant density in Allegan 2015
+median_plantdensity_Allegan_2015 <- summary(myphy.2015.Allegan@sam_data$plantdensity)[[4]]
+myphy.2015.Allegan@sam_data$highXlow_plantdensity <- ifelse(myphy.2015.Allegan@sam_data$plantdensity > median_plantdensity_Allegan_2015, "High", "Low")
+
+# setting the median as cut point for high-low root biomass in Allegan 2015
+median_rootbiomass_Allegan_2015 <- summary(myphy.2015.Allegan@sam_data$mgperroot)[[4]]
+myphy.2015.Allegan@sam_data$highXlow_rootbiomass <- ifelse(myphy.2015.Allegan@sam_data$mgperroot > median_rootbiomass_Allegan_2015, "High", "Low")
+
+# setting the median as cut point for high-low root splitting severity in Allegan 2016
+#median_rootsplitsev_Allegan_2015 <- summary(myphy.2015.Allegan@sam_data$sevsplit)[[3]]
+#myphy.2015.Allegan@sam_data$rootsplitsev <- ifelse(myphy.2015.Allegan@sam_data$sevsplit > median_rootsplitsev_Allegan_2015, "High", "Low")
+
+# getting the mean relative abundance of each OTU
+myphy.2015.Allegan.relative <- myphy.2015.Allegan %>%   
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  arrange(OTU)    # Sort data frame alphabetically by OTU
+mean.rel.abund <- myphy.2015.Allegan.relative %>% 
+  group_by(OTU, highXlow_plantdensity) %>% 
+  nest() %>%
+  mutate(mean.relabund = purrr::map(data,~mean(.$Abundance*100))) %>%
+  mutate(SE.relabund = purrr::map(data,~sd(.$Abundance*100)/sqrt(length(.$Abundance*100)))) %>%
+  unnest(mean.relabund, SE.relabund) %>%
+  select(OTU, highXlow_plantdensity, mean.relabund, SE.relabund) 
+  
+mean.rel.abund[mean.rel.abund$OTU == "OTU71",]
+```
+
+```{r Indicator Species: Plant Density}
+# Perform differential abudnance testing
+indicator.dist <- indicspecies::multipatt(as.data.frame(t(myphy.2015.Allegan@otu_table)), cluster = myphy.2015.Allegan@sam_data$highXlow_plantdensity) 
+
+# summary of results
+summary(indicator.dist, indvalcomp = TRUE)
+
+# get all data for each OTU
+all.OTUs <- indicator.dist$sign
+all.OTUs$OTU <- rownames(all.OTUs)
+
+# set the order of relative abundance to that matching mean.rel.abund
+mean.rel.abund <- mean.rel.abund[ order(match(mean.rel.abund$OTU, all.OTUs$OTU)), ]
+
+# add column of relative abundance to the indicator species analaysis
+all.OTUs$mean.rel <- mean.rel.abund$mean.relabund
+
+all.OTUs$category <- ifelse(all.OTUs$index == 1, "High", ifelse(all.OTUs$index == 2, "Low", "Both"))
+all.OTUs <- all.OTUs %>% filter(!is.na(index))
+all.OTUs$pvalue <- ifelse(is.na(all.OTUs$p.value), 1, all.OTUs$p.value)
+all.OTUs$facet <- "Plant Density"
+
+OTU71 <- myphy.2015.Allegan.relative %>%
+  filter(OTU == c("OTU71")) %>%
+ggplot(aes(x = highXlow_plantdensity, y = 100*Abundance)) + 
+         stat_summary(fun.y=mean,position=position_dodge(width=0.95),geom="bar") +
+  stat_summary(fun.data = mean_se,position=position_dodge(width=0.95), geom = "errorbar", width = 0.5) + 
+         facet_wrap(~Label, scales = "free")+
+  stat_compare_means(label.y = 1, method = "t.test") + 
+  ylab("Percent Relative Abundance") +
+  xlab("")
+OTU41 <- myphy.2015.Allegan.relative %>%
+  filter(OTU == c("OTU41")) %>%
+ggplot(aes(x = highXlow_plantdensity, y = 100*Abundance)) + 
+         stat_summary(fun.y=mean,position=position_dodge(width=0.95),geom="bar") +
+  stat_summary(fun.data = mean_se,position=position_dodge(width=0.95), geom = "errorbar", width = 0.5) + 
+         facet_wrap(~Label, scales = "free")+
+  stat_compare_means(label.y = 1, method = "t.test") + 
+  ylab("Percent Relative Abundance") +
+  xlab("")
+
+plot_grid(OTU71, OTU41, nrow = 1, labels = "AUTO")
+
+```
+
+```{r Indicator Species:rootbiomass}
+indicator.dist <- indicspecies::multipatt(as.data.frame(t(myphy.2015.Allegan@otu_table)), cluster = myphy.2015.Allegan@sam_data$highXlow_rootbiomass)
+
+summary(indicator.dist, indvalcomp = TRUE)
+
+all.OTUs.rootbiomass <- indicator.dist$sign
+all.OTUs.rootbiomass$OTU <- rownames(all.OTUs.rootbiomass)
+
+mean.rel.abund <- mean.rel.abund[ order(match(mean.rel.abund$OTU, all.OTUs$OTU)), ]
+
+mean.rel.abund <- mean.rel.abund[ order(match(mean.rel.abund$OTU, all.OTUs.rootbiomass$OTU)), ]
+
+all.OTUs.rootbiomass$mean.rel <- mean.rel.abund$mean.relabund
+
+all.OTUs.rootbiomass$category <- ifelse(all.OTUs.rootbiomass$index == 1, "High", ifelse(all.OTUs.rootbiomass$index == 2, "Low", "Both"))
+all.OTUs.rootbiomass <- all.OTUs.rootbiomass %>% filter(!is.na(index))
+all.OTUs.rootbiomass$pvalue <- ifelse(is.na(all.OTUs.rootbiomass$p.value), 1, all.OTUs.rootbiomass$p.value)
+all.OTUs.rootbiomass$facet <- "Root Biomass"
+
+# getting the mean relative abundance of each OTU
+myphy.2015.Allegan.relative <- myphy.2015.Allegan %>%   
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  arrange(OTU)    # Sort data frame alphabetically by OTU
+mean.rel.abund <- myphy.2015.Allegan.relative %>% 
+  group_by(OTU, highXlow_rootbiomass) %>% 
+  nest() %>%
+  mutate(mean.relabund = purrr::map(data,~mean(.$Abundance*100))) %>%
+  mutate(SE.relabund = purrr::map(data,~sd(.$Abundance*100)/sqrt(length(.$Abundance*100)))) %>%
+  unnest(mean.relabund, SE.relabund) %>%
+  select(OTU, highXlow_rootbiomass, mean.relabund, SE.relabund) 
+  
+mean.rel.abund[mean.rel.abund$OTU == "OTU135",]
+myphy.site.year@tax_table
+
+
+OTU18 <- myphy.2015.Allegan.relative %>%
+  filter(OTU == c("OTU18")) %>%
+ggplot(aes(x = highXlow_rootbiomass, y = 100*Abundance)) + 
+         stat_summary(fun.y=mean,position=position_dodge(width=0.95),geom="bar") +
+  stat_summary(fun.data = mean_se,position=position_dodge(width=0.95), geom = "errorbar", width = 0.5) + 
+         facet_wrap(~Label, scales = "free")+
+  stat_compare_means(label.y = 1.4, label.x = 1.5, method = "t.test") + 
+  ylab("Percent Relative Abundance") +
+  xlab("")
+OTU135 <- myphy.2015.Allegan.relative %>%
+  filter(OTU == c("OTU135")) %>%
+ggplot(aes(x = highXlow_rootbiomass, y = 100*Abundance)) + 
+         stat_summary(fun.y=mean,position=position_dodge(width=0.95),geom="bar") +
+  stat_summary(fun.data = mean_se,position=position_dodge(width=0.95), geom = "errorbar", width = 0.5) + 
+         facet_wrap(~Label, scales = "free")+
+  stat_compare_means(label.y = 0.3, label.x = 1, method = "t.test") + 
+  ylab("Percent Relative Abundance") +
+  xlab("")
+
+plot_grid(OTU18, OTU135, nrow = 1, labels = "AUTO")
+```
+
+```{r Figure 4}
+# combine results of both comparisons
+combined.all.OTUs <- rbind.data.frame(all.OTUs, all.OTUs.rootbiomass)
+mypal = pal_npg("nrc")(10)
+
+# plot results
+ind.species.allegan <- ggplot(combined.all.OTUs, aes(x = stat, y = -log10(pvalue))) + 
+geom_point(aes(fill=as.factor(category), size = 100*mean.rel), 
+       colour="black", shape = 21, alpha = 0.6) +
+  scale_fill_manual(values = c(mypal[3], mypal[2], mypal[1]), name = "Association") +
+  geom_label_repel(data = subset(combined.all.OTUs, pvalue < 0.05), aes(label = OTU)) +
+  scale_size_continuous(range = c(2, 18), breaks = c(0.01, 0.1, 1, 5, 10, 15, 20, 25, 30), name = "Mean percent \nrelative abundance") + 
+  my.theme2 +
+  scale_x_continuous(name = "Association Statistic", breaks = c(0.0, 0.25, 0.50, 0.75, 1), limits = c(0, 1.2)) +
+  #xlab("Association Statistic") + 
+  ylab("-log10 Pvalue") + 
+  facet_wrap(~facet)
+
+# combine plots for Figure 4. 
+plot_grid(dbRDA.allegan.2015, ind.species.allegan, labels = "AUTO", nrow = 2)
+```
+
+
+```{r Plot}
+ind.species.Allegan.2015 <- ggplot(all.OTUs, aes(x = 1.1, y = stat, label = OTU)) + 
+geom_point(aes(fill=sig, size = 100*mean.rel), 
+       colour="black", shape = 21, alpha = 0.6) +
+  ylim(0, 1) +
+  xlim(1, 1.3) +
+  facet_wrap(~category, ncol= 4, strip.position="top") +
+  scale_fill_manual(values = c(mypal[1], mypal[2]), name = "") +
+  geom_text_repel(data = subset(all.OTUs, pvalue < 0.05),
+    nudge_x      = -0.15,
+    direction    = "y",
+    hjust        = -3,
+    segment.size = 0.2
+  ) +
+  #geom_label(data = subset(all.OTUs, pvalue < 0.05 & mean.rel >= 0.01), aes(label = Species), position = pos) +
+  scale_size_continuous(range = c(2, 18), breaks = c(0.01, 0.1, 1, 5, 10, 15, 20, 25, 30), name = "Mean percent \nrelative abundance") + 
+  theme(
+    axis.line.x  = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.x  = element_blank(),
+    axis.title.x = element_blank(),
+    plot.title   = element_text(hjust = 0.5)
+  ) +
+  ylab("Association Statistic")
+```
+
+##Differential Abundance testing
+
+### ANCOM which is best for differential abundance testing for microbiome data
+since it has a lower FDR than other methods.
+
+```{r OTU table ANCOM}
+# Comparing locations in 2015
+otu.2015.Allegan <- data.frame(t(myphy.2015.Allegan@otu_table)) # OTU table as dataframe
+rownames(otu.2015.Allegan) <- 1:nrow(otu.2015.Allegan) # rownames
+otu.2015.Allegan$highlowplantdensity <- myphy.2015.Allegan@sam_data$highXlow_plantdensity # last column is contrast
+
+otu.2016 <- data.frame(t(myphy.2016@otu_table)) # OTU table as dataframe
+rownames(otu.2016) <- 1:nrow(otu.2016) # rownames
+otu.2016$location <- myphy.2016@sam_data$location # last column is contrast
+```
+
+Trying ANCOM with updated code 
+```{r}
+# comparing location in 2015
+myphy.2015 <- myphy.4 %>%
+  subset_samples(year == "2015")
+otu.2015 <- data.frame(t(myphy.2015@otu_table)) # OTU table as dataframe
+otu.2015 <- cbind.data.frame(rownames(otu.2015), otu.2015)
+colnames(otu.2015)[1] <- "Sample.ID"
+
+ancom.out <- ANCOM.main(OTUdat = otu.2015,
+           Vardat = meta.data, 
+           adjusted = F,
+           repeated = F,
+           main.var = "location",
+           adj.formula = NULL,
+           repeat.var = NULL,
+           longitudinal = FALSE,
+           random.formula = NULL,
+           multcorr = 2, 
+           sig = 0.05,
+           prev.cut = 0.90)
+
+ancom.out$W.detected
+
+# do not need to run ANCOM on rarefied counts
+myphy.2015.Allegan <- myphy.4 %>%
+  subset_samples(location == "Allegan" & year == "2015")
+
+# setting the median as cut point for high-low root biomass in Allegan 2015
+median_plantdensity_Allegan_2015 <- summary(myphy.2015.Allegan@sam_data$plantdensity)[[3]]
+myphy.2015.Allegan@sam_data$highXlow_plantdensity <- ifelse(myphy.2015.Allegan@sam_data$plantdensity > median_plantdensity_Allegan_2015, "High", "Low")
+
+# Comparing high vs low plant density
+otu.2015.Allegan <- data.frame(t(myphy@otu_table)) # OTU table as dataframe
+otu.2015.Allegan <- cbind.data.frame(rownames(otu.2015.Allegan), otu.2015.Allegan)
+colnames(otu.2015.Allegan)[1] <- "Sample.ID"
+
+meta.data <- data.frame(myphy@sam_data)
+colnames(meta.data)[1] <- "Sample.ID"
+
+ANCOM.main(OTUdat = otu.2015,
+           Vardat = meta.data, 
+           adjusted = F,
+           repeated = F,
+           main.var = "location",
+           adj.formula = NULL,
+           repeat.var = NULL,
+           longitudinal = FALSE,
+           random.formula = NULL,
+           multcorr = 2, 
+           sig = 0.05,
+           prev.cut = 0.90)
+```
+
+
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("edgeR", version = "3.8")
+library(edgeR)
+## Define location enriched OTU
+edgeR_enrich <- DGEList(counts=data.frame(myphy.2016@otu_table), 
+                            group=myphy.2016@sam_data$location)
+
+edgeR_16s_enrich <- edgeR::calcNormFactors(edgeR_enrich)
+
+otu_norm_16s_enrich <- cpm(edgeR_16s_enrich, normalized.lib.sizes=T, log=F)
+
+model_mat_enrich_16s <- model.matrix(~location, data=data.frame(myphy.2016@sam_data))
+
+dge_enrich_16s <- estimateGLMRobustDisp(edgeR_16s_enrich, design=model_mat_enrich_16s)
+plotBCV(dge_enrich_16s)
+plotSmear(dge_enrich_16s, pair=c("Ingham","Allegan"))
+
+fit_enrich_16s <- glmFit(dge_enrich_16s, design=model_mat_enrich_16s)
+lrt_enrich_16s <- glmLRT(fit_enrich_16s, coef="locationIngham")
+tt_enrich_16s <- topTags(lrt_enrich_16s, n=Inf, p.value=1)
+
+tt_enrich_16s$table$OTU <- rownames(tt_enrich_16s$table)
+
+high_enrich_16s <- tt_enrich_16s$table[tt_enrich_16s$table$logFC < 0 & tt_enrich_16s$table$FDR < 0.05,]
+low_enrich_16s <- tt_enrich_16s$table[tt_enrich_16s$table$logFC > 0 & tt_enrich_16s$table$FDR < 0.05,]
+
+sig_otu <- c(high_enrich_16s$OTU, low_enrich_16s$OTU)
+
+### Bacteria
+tt_enrich_16s <- as.data.frame(tt_enrich_16s)
+tt_enrich_16s$AveCPM <- 2^tt_enrich_16s$logCPM
+tt_enrich_16s$sig <- ifelse(tt_enrich_16s$OTU %in% sig_otu, "Sig", "Not")
+
+ggplot(tt_enrich_16s, aes(x = logFC, y = -log10(FDR), label = OTU, color = sig, size = 2^logCPM)) + 
+  geom_point() +
+  #geom_text_repel(data = subset(tt_enrich_16s, sig = "Sig")) +
+  theme_bw() +
+  geom_vline(xintercept = 0, linetype='dashed') +
+  xlab("logFC") + 
+  ylab("-log10(Pvalue)") +
+  my.theme2 + 
+  scale_color_npg()
+  #annotate("text", x = -2.5, y = 3, label = "Significantly less abundant", size = 6) +
+  #annotate("text", x = 3.5, y = 3, label = "Significantly more abundant", size = 6) +
+
+forMA_16S <- data.frame(2^tt_enrich_16s$logCPM,
+                   tt_enrich_16s$logFC,
+                   tt_enrich_16s$FDR<0.05)
+colnames(forMA_16S) <- c("CPM", "logFC", "signif")
+
+## define colors
+forMA_16S$col[forMA_16S$signif==F] <- "dimgrey"
+forMA_16S$col[forMA_16S$logFC>0 & forMA_16S$signif==T] <- "forestgreen"
+forMA_16S$col[forMA_16S$logFC<0 & forMA_16S$signif==T] <- "sienna4"
+# order for plotting colors
+forMA_16S$ord[forMA_16S$col=="dimgrey"] <- 1
+forMA_16S$ord[forMA_16S$col=="forestgreen"] <- 2
+forMA_16S$ord[forMA_16S$col=="sienna4"] <- 3
+forMA_16S <- forMA_16S[sort(forMA_16S$ord,ind=T,decr=F)$ix,]
+
+## define pch
+forMA_16S$pch[forMA_16S$signif==F] <- 1
+forMA_16S$pch[forMA_16S$signif==T] <- 16
+
+## plot
+plot(forMA_16S$CPM, forMA_16S$logFC, log="x", ylim=c(-7.6,8.2),
+     main="Bacteria",
+     ylab="log fold change", xlab="average abundance CPM",
+     col=forMA_16S$col, cex=1, pch=forMA_16S$pch, las=1)
+text(rep(95,2), c(-7,7), label=c("soil", "root"), adj=0, cex=1.5, col=c("sienna4","forestgreen"))
+```
+
+
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("metagenomeSeq", version = "3.8")
+
+make_metagenomeSeq = function(physeq) {
+    require("metagenomeSeq")
+    require("phyloseq")
+    # Enforce orientation
+    if (!taxa_are_rows(physeq)) {
+        physeq <- t(physeq)
+    }
+    OTU = as(otu_table(physeq), "matrix")
+    # Convert sample_data to AnnotatedDataFrame
+    ADF = AnnotatedDataFrame(data.frame(sample_data(physeq)))
+    # define dummy 'feature' data for OTUs, using their name Helps with
+    # extraction and relating to taxonomy later on.
+    TDF = AnnotatedDataFrame(data.frame(OTUname = taxa_names(physeq), row.names = taxa_names(physeq)))
+    # Create the metagenomeSeq object
+    MGS = newMRexperiment(counts = OTU, phenoData = ADF, featureData = TDF)
+    # Trigger metagenomeSeq to calculate its Cumulative Sum scaling factor.
+    MGS = cumNorm(MGS)
+    return(MGS)
+}
+myphy.metagenomeSeq.2015 <- make_metagenomeSeq(myphy.2015.Allegan)
+
+p =cumNormStatFast(myphy.metagenomeSeq.2015)
+lungData = cumNorm(myphy.metagenomeSeq.2015, p = p)
+
+# can use the filterData function to filter the OTU table, but we have already done that, so we will skip that part
+pd <- pData(lungData)  # sample data 
+mod <- model.matrix(~1 + highXlow_plantdensity, data = pd) # testing the effect of location 
+lungres1 = fitFeatureModel(lungData, mod)
+
+df <- data.frame(lungres1$fitZeroLogNormal$logFC, lungres1$pvalues)
+colnames(df) <- c("logFC", "Pvalue")
+df$OTU <- rownames(df)
+
+plotdata <- MRcoefs(lungres1, number = 218, adjustMethod = "none") # taking all taxa
+MRtable(lungres1, number = 218)
+plotdata$OTU <- rownames(plotdata)
+plotdata$sig <- ifelse(plotdata$adjPvalues < 0.05, "Sig", "Not")
+
+ggplot(plotdata, aes(x = logFC, y = -log10(pvalues), color = sig, label = OTU)) + 
+  geom_point() +
+  geom_text_repel(data = subset(plotdata, sig = "Sig")) +
+  theme_bw() +
+  geom_vline(xintercept = 0, linetype='dashed') +
+  xlab("logFC") + 
+  ylab("-log10(Pvalue)") +
+  my.theme2 + 
+  scale_color_npg()
+
+
+library(metagenomeSeq)
+data(lungData)
+lungData = lungData[, -which(is.na(pData(lungData)$SmokingStatus))] 
+lungData = filterData(lungData, present = 30, depth = 1)
+lungData <- cumNorm(lungData, p = 0.5)
+pd <- pData(lungData)
+mod <- model.matrix(~1 + SmokingStatus, data = pd)
+lungres1 = fitFeatureModel(lungData, mod)
+head(MRcoefs(lungres1))
+```
+##Networks
+
+We are going to do network analysis to see if there were any differences in community relationships among taxa in Allegan 2015
+### Datasubsetting
+```{r Networks}
+myphy.site.year <- myphy_oomy_rhizosphere %>% 
+  phyloseq::subset_samples(
+    year == "2016" 
+                 &
+                   location == "Ingham") %>%
+  phyloseq::filter_taxa(., function(x) sum(x) > 2, TRUE)
+  filter_taxa(., function(x) sum(x > 3) > (length(x) > 5), TRUE)
+phyloseq::filter_taxa(., function(x) sum(x) > 1, TRUE)
+filter_taxa(., function(x) sum(x) > 1, TRUE) # filtering out those OTUs not observed in Allegan 2015 and those observed as singletons. 
+filter_taxa(., function(x) sum(x > 3) > (length(x) > 5), TRUE)
+filter_taxa(., function(x) sum(x > 1) > (length(x) > 5), TRUE)
+GP = filter_taxa(myphy.site.year, function(x) sum(x > 3) > (length(x) > 5), TRUE)
+```
+
+### Allegan 2015 High rootbiomass network
+```{r Subsetting/filtering data}
+se.mb.amgut <- spiec.easi(myphy.site.year, method='mb', lambda.min.ratio=0.01,
+                          nlambda=20, pulsar.params=list(rep.num=100))
+ig2.mb <- adj2igraph(getRefit(se.mb.amgut),  vertex.attr=list(name=taxa_names(myphy.site.year)))
+
+# Identify isolated nodes
+bad.vs<-V(ig2.mb)[degree(ig2.mb) == 0] 
+# Remove isolated nodes
+net.grph<-delete.vertices(ig2.mb, bad.vs)
+
+plot_network(net.grph, myphy.site.year, type='taxa', color="Genus", label = "Species")
+
+# Use sparcc.net for the rest of the method net <- sparcc.net
+# Hub detection
+net.cn <- closeness(net.grph)
+net.bn <- betweenness(net.grph) 
+net.pr <- page_rank(net.grph)$vector 
+net.hs <- hub_score(net.grph)$vector
+net.dg <- degree(net.grph)
+
+hubs <- data.frame(hub_score(net.grph)$vector); colnames(hubs) <- c("hubscore")
+hubs$OTU <- rownames(hubs)
+hubs$betweeness <- net.bn
+hubs$pr <- net.pr
+hubs$degree <- net.dg
+hubs$closness <- net.cn
+
+# getting the mean relative abundance of each OTU
+myphy.site.year.relative <- myphy.site.year %>%   
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  arrange(OTU)
+mean.rel.abund <- myphy.site.year.relative %>% 
+  group_by(OTU) %>% 
+  nest() %>%
+  mutate(mean.relabund = purrr::map(data,~mean(.$Abundance*100))) %>%
+  mutate(SE.relabund = purrr::map(data,~sd(.$Abundance*100)/sqrt(length(.$Abundance*100)))) %>%
+  unnest(mean.relabund, SE.relabund)
+
+nodes.stats <- hubs
+nodes.stats$mean.abundance <- mean.rel.abund$mean.relabund[match(nodes.stats$OTU, mean.rel.abund$OTU)]
+nodes.stats$Clade <- aditional_taxonomy$Clade[match(nodes.stats$OTU, aditional_taxonomy$OTU)]
+nodes.stats$Label <- aditional_taxonomy$Label[match(nodes.stats$OTU, aditional_taxonomy$OTU)]
+nodes.stats$Genus <- myphy.site.year.relative$Genus[match(nodes.stats$OTU, myphy.site.year.relative$OTU)]
+
+mean.close <- mean(log10(nodes.stats$closness))
+sd.close <- sd(log10(nodes.stats$closness))
+hubline.close <- (mean.close + 1.282*sd.close)
+
+z.score.close = (hubline.close - mean.close)/sd.close
+pnorm(z.score.close) # line is above 90 % - equal to p = 0.1
+
+mean.degree <- mean(log10(nodes.stats$degree))
+sd.degree <- sd(log10(nodes.stats$degree))
+hubline.degree <- (mean.degree + 1.282*sd.degree)
+
+z.score.degree = (hubline.degree - mean.degree)/sd.degree
+pnorm(z.score.degree) # line is above 90 % - equal to p = 0.1
+
+mean.between <- mean(log10(nodes.stats$betweeness[nodes.stats$betweeness > 0]))
+sd.between <- sd(log10(nodes.stats$betweeness[nodes.stats$betweeness > 0]))
+hubline.between <- (mean.between + 1.282*sd.between)
+
+z.score.between = (hubline.between - mean.between)/sd.between
+pnorm(z.score.between) # line is above 90 % - equal to p = 0.1
+
+close <- ggplot() + 
+  geom_point(data = nodes.stats, aes(size = mean.abundance, x = closness, y = degree), alpha = 0.6) +
+  scale_size_continuous(name = "Relative Abundance") +
+  theme_bw() + 
+  my.theme2 + 
+  geom_text_repel(data = subset(nodes.stats, closness > 10^hubline.close & degree > 10^hubline.degree), aes(x = closness, y = degree, label = Label)) +
+  xlab("Closeness Centrality") + 
+  ylab("Degree") + 
+  geom_vline(xintercept = 10^hubline.close) + 
+  geom_hline(yintercept = 10^hubline.degree)
+between <- ggplot() + 
+  geom_point(data = nodes.stats, aes(size = mean.abundance, x = betweeness, y = degree), alpha = 0.6) +
+  scale_size_continuous(name = "Relative Abundance") +
+  theme_bw() + 
+  my.theme2 + 
+  geom_text_repel(data = subset(nodes.stats, betweeness > 10^hubline.between & degree > 10^hubline.degree), aes(x = betweeness, y = degree, label = Label)) +
+  xlab("Betweeness Centrality") + 
+  ylab("Degree") +
+  geom_vline(xintercept = 10^hubline.between) + 
+  geom_hline(yintercept = 10^hubline.degree)
+
+hub.plot <- plot_grid(close, between, labels = "AUTO", nrow = 2)
+
+# Get clusters
+wt <- walktrap.community(net.grph)
+# Calculate modularity
+modu <- modularity(net.grph, membership(wt))
+
+### add pos-neg to table
+betaMat=as.matrix(symBeta(getOptBeta(se.mb.amgut)))
+otu.ids=colnames(se.mb.amgut$est$data)
+edges=E(net.grph)
+edge.stats <- NULL
+for(e.index in 1:length(edges)){
+  adj.nodes=ends(net.grph,edges[e.index])
+  xindex=which(otu.ids==adj.nodes[1])
+  yindex=which(otu.ids==adj.nodes[2])
+  beta=betaMat[xindex,yindex]
+  wt_i <- cbind.data.frame(adj.nodes, beta)
+  colnames(wt_i) <- c("source", "target", "beta")
+  edge.stats <- rbind.data.frame(wt_i, edge.stats)
+}
+
+edge.stats$direction <- ifelse(edge.stats$beta > 0, "Positive", "Negative")
+edge.stats$shared.name <- paste(edge.stats$source, "(interacts with)", edge.stats$target)
+
+prop.edges <- edge.stats %>%
+  group_by(direction) %>%
+  summarise(counts = n()) %>%
+  select(direction, counts)
+prop.edges$prop <- 100*prop.edges$counts/sum(prop.edges$counts)
+  ggplot(prop.edges,aes(x = 1, y = prop, fill = direction)) +
+  geom_bar(stat = "identity", position = position_stack()) + 
+  scale_fill_npg() +
+  xlab("") +
+  ylab("Number of Edges") + 
+  theme(legend.position="top") +
+  theme(legend.title=element_blank()) + 
+    my.theme.composition
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
